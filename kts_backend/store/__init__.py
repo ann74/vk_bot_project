@@ -16,7 +16,7 @@ class Store:
         self.vk_api = VkApiAccessor(app)
         self.bots_manager = BotManager(app)
         self.sender = SenderAccessor(app)
-        self.user = UserAccessor()
+        self.user = UserAccessor(app)
 
 
 def setup_store(app: "Application"):

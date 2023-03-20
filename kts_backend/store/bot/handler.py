@@ -23,9 +23,9 @@ class Handler:
 
     async def stop(self):
         self.is_running = False
-        await asyncio.wait([self.handler_task], timeout=30)
+        await asyncio.wait([self.handler_task], timeout=1)
 
     async def handle_updates(self):
-        while self.is_running or not self.store.bots_manager.app.receivers_queue.empty():
+        while self.is_running:
             update = await self.store.bots_manager.app.receivers_queue.get()
             await self.store.bots_manager.handle_updates(update)

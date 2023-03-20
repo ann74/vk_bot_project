@@ -34,13 +34,13 @@ class SenderAccessor(BaseAccessor):
         if self.sender:
             await self.sender.stop()
 
-    @staticmethod
-    def _build_query(host: str, method: str, params: dict) -> str:
-        url = host + method + "?"
-        if "v" not in params:
-            params["v"] = "5.131"
-        url += "&".join([f"{k}={v}" for k, v in params.items()])
-        return url
+    # @staticmethod
+    # def _build_query(host: str, method: str, params: dict) -> str:
+    #     url = host + method + "?"
+    #     if "v" not in params:
+    #         params["v"] = "5.131"
+    #     url += "&".join([f"{k}={v}" for k, v in params.items()])
+    #     return url
 
     async def send_message(self, message: Message) -> None:
         async with self.session.get(

@@ -23,9 +23,9 @@ class Sender:
 
     async def stop(self):
         self.is_running = False
-        await asyncio.wait([self.sender_task], timeout=30)
+        await asyncio.wait([self.sender_task], timeout=1)
 
     async def send_messages(self):
-        while self.is_running or not self.store.sender.app.senders_queue.empty():
+        while self.is_running:
             message = await self.store.sender.app.senders_queue.get()
             await self.store.sender.send_message(message)

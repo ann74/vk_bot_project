@@ -42,6 +42,7 @@ class Config:
     session: SessionConfig = None
     bot: BotConfig = None
     database: DatabaseConfig = None
+    vk_key: str = None
 
 
 def setup_config(app: "Application", config_path: str):
@@ -67,4 +68,5 @@ def setup_config(app: "Application", config_path: str):
             user=os.getenv('DB_USER'),
             password=os.getenv('DB_PASSWORD'),
         ),
+        vk_key=os.getenv('VK_KEY'),
     )

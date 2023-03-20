@@ -1,2 +1,1 @@
-# from app.admin.models import *
-# from app.quiz.models import *
+from kts_backend.users.models import *
