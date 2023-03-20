@@ -44,16 +44,17 @@ class SenderAccessor(BaseAccessor):
 
     async def send_message(self, message: Message) -> None:
         async with self.session.get(
-                self._build_query(
-                    host=API_PATH,
-                    method='messages.send',
-                    params={'message': message.text,
-                            'access_token': self.app.config.bot.token,
-                            'peer_id': message.peer_id,
-                            'random_id': random.randint(1, 1000000),
-                            'user_id': message.user_id,
-                            }
-                )
+            self._build_query(
+                host=API_PATH,
+                method="messages.send",
+                params={
+                    "message": message.text,
+                    "access_token": self.app.config.bot.token,
+                    "peer_id": message.peer_id,
+                    "random_id": random.randint(1, 1000000),
+                    "user_id": message.user_id,
+                },
+            )
         ) as resp:
             data = await resp.json()
             self.logger.info(data)

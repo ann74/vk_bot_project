@@ -43,7 +43,7 @@ class PlayerModel(db):
             vk_id=self.vk_id,
             name=self.name,
             last_name=self.last_name,
-            score=self.score.to_dc()
+            score=self.score.to_dc(),
         )
 
 
@@ -60,20 +60,21 @@ class GameModel(db):
             id=self.id,
             created_at=self.created_at,
             chat_id=self.chat_id,
-            players=[player.to_dc for player in self.players]
+            players=[player.to_dc for player in self.players],
         )
 
 
 class GameScoreModel(db):
     __tablename__ = "gamescore"
     id = Column(Integer, primary_key=True)
-    game_id = Column(Integer, ForeignKey('games.id', ondelete='CASCADE'), nullable=False)
-    player_id = Column(Integer, ForeignKey('players.vk_id', ondelete='CASCADE'), nullable=False)
+    game_id = Column(
+        Integer, ForeignKey("games.id", ondelete="CASCADE"), nullable=False
+    )
+    player_id = Column(
+        Integer, ForeignKey("players.vk_id", ondelete="CASCADE"), nullable=False
+    )
     points = Column(Integer)
     place = Column(Integer)
 
     def to_dc(self) -> GameScore:
-        return GameScore(
-            points=self.points,
-            place=self.place
-        )
+        return GameScore(points=self.points, place=self.place)

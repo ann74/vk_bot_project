@@ -26,8 +26,8 @@ class BotManager(BaseAccessor):
 
     async def handle_updates(self, update: Update):
         message = Message(
-                user_id=update.object.user_id,
-                text=update.object.body,
-                peer_id=update.object.peer_id
-            )
+            user_id=update.object.user_id,
+            text=update.object.body,
+            peer_id=update.object.peer_id,
+        )
         await self.app.senders_queue.put(message)

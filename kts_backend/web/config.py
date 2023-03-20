@@ -10,6 +10,7 @@ if typing.TYPE_CHECKING:
 
 load_dotenv()
 
+
 @dataclass
 class SessionConfig:
     key: str
@@ -58,15 +59,15 @@ def setup_config(app: "Application", config_path: str):
             password=raw_config["admin"]["password"],
         ),
         bot=BotConfig(
-            token=os.getenv('BOT_TOKEN'),
-            group_id=int(os.getenv('BOT_GROUP_ID')),
+            token=os.getenv("BOT_TOKEN"),
+            group_id=int(os.getenv("BOT_GROUP_ID")),
         ),
         database=DatabaseConfig(
             host=raw_config["database"]["host"],
             port=raw_config["database"]["port"],
             database=raw_config["database"]["database"],
-            user=os.getenv('DB_USER'),
-            password=os.getenv('DB_PASSWORD'),
+            user=os.getenv("DB_USER"),
+            password=os.getenv("DB_PASSWORD"),
         ),
-        vk_key=os.getenv('VK_KEY'),
+        vk_key=os.getenv("VK_KEY"),
     )

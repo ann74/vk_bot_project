@@ -69,19 +69,19 @@ class VkApiAccessor(BaseAccessor):
         self.app.logger.info("new poll request")
         url = self._build_query(
             host=self.server,
-            method='',
+            method="",
             params={
-                'act': 'a_check',
-                'key': self.key,
-                'ts': self.ts,
-                'wait': 30
-            }
+                "act": "a_check",
+                "key": self.key,
+                "ts": self.ts,
+                "wait": 30,
+            },
         )
         async with self.session.get(url) as resp:
             data = await resp.json()
             self.logger.info(data)
-            self.ts = data['ts']
-            raw_updates = data['updates']
+            self.ts = data["ts"]
+            raw_updates = data["updates"]
             for raw_update in raw_updates:
                 update = Update(
                     type=raw_update["type"],
@@ -89,7 +89,7 @@ class VkApiAccessor(BaseAccessor):
                         id=raw_update["object"]["message"]["id"],
                         user_id=raw_update["object"]["message"]["from_id"],
                         body=raw_update["object"]["message"]["text"],
-                        peer_id=raw_update["object"]["message"]["peer_id"]
+                        peer_id=raw_update["object"]["message"]["peer_id"],
                     ),
                 )
                 await self.app.receivers_queue.put(update)

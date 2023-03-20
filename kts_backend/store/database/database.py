@@ -1,7 +1,11 @@
 from typing import Optional, TYPE_CHECKING
 
 from sqlalchemy.engine import URL
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    create_async_engine,
+)
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 from kts_backend.store.database.sqlalchemy_base import db
@@ -10,6 +14,7 @@ if TYPE_CHECKING:
     from kts_backend.web.app import Application
 
 DATABASE_URL = "postgresql+asyncpg://vkbot:password@localhost/vkbot_qweez"
+
 
 class Database:
     def __init__(self, app: "Application"):
@@ -40,4 +45,3 @@ class Database:
             await self._engine.dispose()
         except Exception:
             pass
-

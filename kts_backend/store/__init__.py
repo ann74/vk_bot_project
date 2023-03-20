@@ -26,4 +26,3 @@ def setup_store(app: "Application"):
     app.store = Store(app)
     app.receivers_queue = Queue()
     app.senders_queue = Queue()
-

@@ -55,6 +55,7 @@ class View(AiohttpView):
 
 app = Application()
 
+
 def setup_app(config_path: str) -> Application:
     setup_logging(app)
     setup_config(app, config_path)
@@ -65,5 +66,3 @@ def setup_app(config_path: str) -> Application:
     # setup_middlewares(app)
     setup_store(app)
     return app
-
-

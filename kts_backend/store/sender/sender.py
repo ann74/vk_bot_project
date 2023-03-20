@@ -14,7 +14,9 @@ class Sender:
 
     def _done_call_back(self, future: Future):
         if future.exception():
-            self.store.sender.logger.exception("sender failed", exc_info=future.exception())
+            self.store.sender.logger.exception(
+                "sender failed", exc_info=future.exception()
+            )
 
     async def start(self):
         self.is_running = True
