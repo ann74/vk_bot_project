@@ -1,15 +1,14 @@
-from typing import Optional, Sequence, Callable
+from typing import Optional
 
 from aiohttp.web import (
     Application as AiohttpApplication,
     View as AiohttpView,
     Request as AiohttpRequest,
 )
-from aiohttp_cors import CorsConfig
 from aiohttp_session import setup as session_setup
 from aiohttp_session.cookie_storage import EncryptedCookieStorage
 
-from kts_backend import __appname__, __version__
+# from kts_backend import __appname__, __version__
 from .config import Config, setup_config
 from .logger import setup_logging
 from .urls import register_urls
@@ -18,7 +17,6 @@ from kts_backend.store import Store, setup_store
 
 
 __all__ = ("Application",)
-
 
 
 class Application(AiohttpApplication):
@@ -54,13 +52,11 @@ class View(AiohttpView):
 
 
 app = Application()
-cors = CorsConfig(app)
 
 def setup_app(config_path: str) -> Application:
     setup_logging(app)
     setup_config(app, config_path)
     session_setup(app, EncryptedCookieStorage(app.config.session.key))
-    register_urls(app, cors)
     # setup_aiohttp_apispec(
     #     app, title="Vk Quiz Bot", url="/docs/json", swagger_path="/docs"
     # )

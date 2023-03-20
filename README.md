@@ -1,3 +1,10 @@
+oleglazarenko@yandex.ru
+
+Лазаренко Анна Юрьевна
+
+@aulazar
+https://t.me/aulazar
+
 # Памятка по работе с проектом
 
 ## Начало работы с проектом

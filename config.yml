@@ -1,7 +1,5 @@
 user_token:
 
-env_file:
-  - ./.env
 session:
   key: CaY5iCkYtN7DqXdiYK1BvmGrQuaSA4Tl4bEk9my0jc0=
 admin:
@@ -10,11 +8,11 @@ admin:
 database:
   host: 0.0.0.0
   port: 5432
-  user: ${DB_USER}
-  password: ${DB_PASSWORD}
-  database: ${DB_NAME}
+  user: DB_USER
+  password: DB_PASSWORD
+  database: vkbot_qweez
 bot:
-  token: vk1.a.Uf-4MQdGng60XnA7KwE_xMbQoVYsQ4bYO_6WKXXEv9QF39xmcez08kMKFFir_Ggxa93eL7TbxayZ4-tQSsEjbBBkwxuh3GBl1_KkMEo2Jds4i6XTRusoVY6FAdsjcIRyr3FzYo3YToylEzJ1Fe3qu_QooaTKtfRZr7k-hj1Ny4gTQ8AS1tYOJ5Q3DiVjTqfrLIwyvNv0gmj28gijQZl5-A
-  group_id: 218959069
+  token: BOT_TOKEN
+  group_id: BOT_GROUP_ID
 
 

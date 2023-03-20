@@ -2,7 +2,6 @@ import asyncio
 
 from asyncio import Task, Future
 from typing import Optional
-
 from aiohttp import ClientOSError
 
 from kts_backend.store import Store
