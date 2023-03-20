@@ -49,7 +49,7 @@ class SenderAccessor(BaseAccessor):
                     method='messages.send',
                     params={'message': message.text,
                             'access_token': self.app.config.bot.token,
-                            'peer_id': "-" + str(self.app.config.bot.group_id),
+                            'peer_id': message.peer_id,
                             'random_id': random.randint(1, 1000000),
                             'user_id': message.user_id,
                             }

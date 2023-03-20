@@ -89,6 +89,7 @@ class VkApiAccessor(BaseAccessor):
                         id=raw_update["object"]["message"]["id"],
                         user_id=raw_update["object"]["message"]["from_id"],
                         body=raw_update["object"]["message"]["text"],
+                        peer_id=raw_update["object"]["message"]["peer_id"]
                     ),
                 )
                 await self.app.receivers_queue.put(update)

@@ -6,6 +6,7 @@ class UpdateObject:
     id: int
     user_id: int
     body: str
+    peer_id: str
 
 
 @dataclass
@@ -18,3 +19,4 @@ class Update:
 class Message:
     user_id: int
     text: str
+    peer_id: str

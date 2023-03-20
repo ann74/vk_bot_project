@@ -31,22 +31,22 @@ class UserAccessor(BaseAccessor):
         async with self.session.get(
                 self._build_query(
                     host=API_PATH,
-                    method="messages.getChat",
+                    method="messages.getConversationMembers",
                     params={
-                        "access_token": self.app.config.vk_key,
-                        "chat_id": chat_id,
-                        "fields": "nickname, screen_name"
+                        "access_token": self.app.config.bot.token,
+                        "peer_id": 2000000000 + chat_id,
+                        "extended": 1
                     },
                 )
         ) as resp:
             data = await resp.json()
-            users = data["users"]
+            users = data["profiles"]
             players = []
             for user in users:
                 players.append(Player(
                     vk_id=user["id"],
-                    name=user["nickname"],
-                    last_name=user["screen_name"],
+                    name=user["first_name"],
+                    last_name=user["last_name"],
                     score=None,
                 ))
         return players
