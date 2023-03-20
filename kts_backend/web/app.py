@@ -1,5 +1,5 @@
 from typing import Optional
-
+from asyncio import Queue
 from aiohttp.web import (
     Application as AiohttpApplication,
     View as AiohttpView,
@@ -23,6 +23,8 @@ class Application(AiohttpApplication):
     config: Optional[Config] = None
     store: Optional[Store] = None
     database: Optional[Database] = None
+    receivers_queue: Optional[Queue] = None
+    senders_queue: Optional[Queue] = None
 
 
 class Request(AiohttpRequest):

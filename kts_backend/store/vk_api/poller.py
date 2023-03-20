@@ -15,7 +15,7 @@ class Poller:
 
     def _done_call_back(self, future: Future):
         if future.exception():
-            self.store.app.logger.exception("polling failed", exc_info=future.exception())
+            self.store.vk_api.logger.exception("polling failed", exc_info=future.exception())
 
     async def start(self):
         self.is_running = True
@@ -28,9 +28,9 @@ class Poller:
             await asyncio.wait([self.poll_task], timeout=30)
 
     async def poll(self):
-        while self.is_running:
+        while True:
             try:
-                updates = await self.store.vk_api.poll()
+                await self.store.vk_api.poll()
             except ClientOSError:
                 continue
-            await self.store.bots_manager.handle_updates(updates)
+

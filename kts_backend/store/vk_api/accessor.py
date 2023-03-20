@@ -1,4 +1,3 @@
-import random
 import typing
 from typing import Optional
 
@@ -68,7 +67,6 @@ class VkApiAccessor(BaseAccessor):
 
     async def poll(self):
         self.app.logger.info("new poll request")
-        updates = []
         url = self._build_query(
             host=self.server,
             method='',
@@ -93,21 +91,4 @@ class VkApiAccessor(BaseAccessor):
                         body=raw_update["object"]["message"]["text"],
                     ),
                 )
-                updates.append(update)
-            return updates
-
-    async def send_message(self, message: Message) -> None:
-        async with self.session.get(
-            self._build_query(
-                host=API_PATH,
-                method='messages.send',
-                params={'message': message.text,
-                        'access_token': self.app.config.bot.token,
-                        'peer_id': "-" + str(self.app.config.bot.group_id),
-                        'random_id': random.randint(1, 1000000),
-                        'user_id': message.user_id,
-                        }
-            )
-        ) as resp:
-            data = await resp.json()
-            self.logger.info(data)
+                await self.app.receivers_queue.put(update)
