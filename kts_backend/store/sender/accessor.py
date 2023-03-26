@@ -52,7 +52,7 @@ class SenderAccessor(BaseAccessor):
                     "access_token": self.app.config.bot.token,
                     "peer_id": message.peer_id,
                     "random_id": random.randint(1, 1000000),
-                    "user_id": message.user_id,
+                    # "user_id": message.user_id,
                 },
             )
         ) as resp:
