@@ -7,7 +7,7 @@ from aiohttp.client import ClientSession
 
 from kts_backend.store.base.base_accessor import BaseAccessor
 from kts_backend.store.sender.sender import Sender
-from kts_backend.store.vk_api.dataclasses import Message, Update
+from kts_backend.store.vk_api.dataclasses import Message
 
 if typing.TYPE_CHECKING:
     from kts_backend.web.app import Application
@@ -17,6 +17,9 @@ API_PATH = "https://api.vk.com/method/"
 
 
 class SenderAccessor(BaseAccessor):
+    class Meta:
+        name = "sender"
+
     def __init__(self, app: "Application", *args, **kwargs):
         super().__init__(app, *args, **kwargs)
         self.session: Optional[ClientSession] = None
@@ -29,18 +32,18 @@ class SenderAccessor(BaseAccessor):
         await self.sender.start()
 
     async def disconnect(self, app: "Application"):
-        if self.session:
-            await self.session.close()
         if self.sender:
             await self.sender.stop()
+        if self.session and not self.session.closed:
+            await self.session.close()
 
-    # @staticmethod
-    # def _build_query(host: str, method: str, params: dict) -> str:
-    #     url = host + method + "?"
-    #     if "v" not in params:
-    #         params["v"] = "5.131"
-    #     url += "&".join([f"{k}={v}" for k, v in params.items()])
-    #     return url
+    @staticmethod
+    def _build_query(host: str, method: str, params: dict) -> str:
+        url = host + method + "?"
+        if "v" not in params:
+            params["v"] = "5.131"
+        url += "&".join([f"{k}={v}" for k, v in params.items()])
+        return url
 
     async def send_message(self, message: Message) -> None:
         async with self.session.get(

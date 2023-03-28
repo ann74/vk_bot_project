@@ -15,6 +15,9 @@ API_PATH = "https://api.vk.com/method/"
 
 
 class VkApiAccessor(BaseAccessor):
+    class Meta:
+        name = "vk_api"
+
     def __init__(self, app: "Application", *args, **kwargs):
         super().__init__(app, *args, **kwargs)
         self.session: Optional[ClientSession] = None
@@ -34,18 +37,18 @@ class VkApiAccessor(BaseAccessor):
         await self.poller.start()
 
     async def disconnect(self, app: "Application"):
-        if self.session:
-            await self.session.close()
         if self.poller:
             await self.poller.stop()
+        if self.session and not self.session.closed:
+            await self.session.close()
 
-    # @staticmethod
-    # def _build_query(host: str, method: str, params: dict) -> str:
-    #     url = host + method + "?"
-    #     if "v" not in params:
-    #         params["v"] = "5.131"
-    #     url += "&".join([f"{k}={v}" for k, v in params.items()])
-    #     return url
+    @staticmethod
+    def _build_query(host: str, method: str, params: dict) -> str:
+        url = host + method + "?"
+        if "v" not in params:
+            params["v"] = "5.131"
+        url += "&".join([f"{k}={v}" for k, v in params.items()])
+        return url
 
     async def _get_long_poll_service(self):
         async with self.session.get(

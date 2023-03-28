@@ -30,8 +30,10 @@ class Poller:
             await asyncio.wait([self.poll_task], timeout=30)
 
     async def poll(self):
-        while True:
+        while self.is_running:
             try:
                 await self.store.vk_api.poll()
             except ClientOSError:
                 continue
+            except Exception as e:
+                self.store.vk_api.logger.error("Exception", exc_info=e)

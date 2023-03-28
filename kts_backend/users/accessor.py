@@ -67,7 +67,7 @@ class UserAccessor(BaseAccessor):
                 score=None,
             )
             session.add(user)
-            await session.commit()
+            # await session.commit()
 
     async def create_game(self, chat_id: int) -> Game:
         players = await self.get_users(chat_id)
@@ -77,7 +77,11 @@ class UserAccessor(BaseAccessor):
             )
             session.add(game)
             await session.commit()
-            for player in players:
+            for (
+                player
+            ) in (
+                players
+            ):  # Не так должно быть игроков создаем раньше, здесь ссылки должны быть
                 await self.create_user(player)
         return game.to_dc()
 

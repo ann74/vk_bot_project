@@ -10,6 +10,9 @@ if typing.TYPE_CHECKING:
 
 
 class BotManager(BaseAccessor):
+    class Meta:
+        name = "botmanager"
+
     def __init__(self, app: "Application", *args, **kwargs):
         super().__init__(app, *args, **kwargs)
         self.bot = None
@@ -21,7 +24,7 @@ class BotManager(BaseAccessor):
         await self.handler.start()
 
     async def disconnect(self, app: "Application"):
-        if self.handler:
+        if self.handler and self.handler.is_running:
             await self.handler.stop()
 
     async def handle_updates(self, update: Update):

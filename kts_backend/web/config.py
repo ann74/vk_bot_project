@@ -2,13 +2,9 @@ import typing
 from dataclasses import dataclass
 
 import yaml
-import os
-from dotenv import load_dotenv
 
 if typing.TYPE_CHECKING:
     from kts_backend.web.app import Application
-
-load_dotenv()
 
 
 @dataclass
@@ -59,15 +55,14 @@ def setup_config(app: "Application", config_path: str):
             password=raw_config["admin"]["password"],
         ),
         bot=BotConfig(
-            token=os.getenv("BOT_TOKEN"),
-            group_id=int(os.getenv("BOT_GROUP_ID")),
+            token=raw_config["bot"]["token"],
+            group_id=raw_config["bot"]["group_id"],
         ),
         database=DatabaseConfig(
             host=raw_config["database"]["host"],
             port=raw_config["database"]["port"],
             database=raw_config["database"]["database"],
-            user=os.getenv("DB_USER"),
-            password=os.getenv("DB_PASSWORD"),
+            user=raw_config["database"]["user"],
+            password=raw_config["database"]["password"],
         ),
-        vk_key=os.getenv("VK_KEY"),
     )

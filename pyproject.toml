@@ -16,5 +16,6 @@ exclude = '''
   | migrations
   | .env
   | .gitignore
+  | config.yaml
 )/
 '''

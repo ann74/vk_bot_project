@@ -1,6 +1,6 @@
 import asyncio
 
-from asyncio import Task, Future
+from asyncio import Task
 from typing import Optional
 
 from kts_backend.store import Store
@@ -12,20 +12,13 @@ class Sender:
         self.is_running = False
         self.sender_task: Optional[Task] = None
 
-    def _done_call_back(self, future: Future):
-        if future.exception():
-            self.store.sender.logger.exception(
-                "sender failed", exc_info=future.exception()
-            )
-
     async def start(self):
         self.is_running = True
         self.sender_task = asyncio.create_task(self.send_messages())
-        self.sender_task.add_done_callback(self._done_call_back)
 
     async def stop(self):
         self.is_running = False
-        await asyncio.wait([self.sender_task], timeout=1)
+        self.sender_task.cancel()
 
     async def send_messages(self):
         while self.is_running:

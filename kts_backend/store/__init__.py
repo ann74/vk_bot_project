@@ -1,5 +1,6 @@
 import typing
 from asyncio import Queue
+
 from kts_backend.store.database.database import Database
 
 if typing.TYPE_CHECKING:
@@ -21,8 +22,6 @@ class Store:
 
 def setup_store(app: "Application"):
     app.database = Database(app)
-    app.on_startup.append(app.database.connect)
-    app.on_cleanup.append(app.database.disconnect)
     app.store = Store(app)
     app.receivers_queue = Queue()
     app.senders_queue = Queue()
