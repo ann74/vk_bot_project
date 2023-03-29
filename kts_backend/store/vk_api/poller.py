@@ -27,7 +27,7 @@ class Poller:
     async def stop(self):
         self.is_running = False
         if self.poll_task:
-            await asyncio.wait([self.poll_task], timeout=30)
+            await asyncio.wait([self.poll_task], timeout=10)  # Не забыть поменять на 30 сек (или 20)
 
     async def poll(self):
         while self.is_running:

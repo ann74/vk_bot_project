@@ -28,6 +28,7 @@ class BotManager(BaseAccessor):
             await self.handler.stop()
 
     async def handle_updates(self, update: Update):
+        self.logger.info(update)
         message = Message(
             user_id=update.object.user_id,
             text=update.object.body,

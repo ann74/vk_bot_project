@@ -2,7 +2,7 @@ from typing import Optional
 from datetime import datetime
 from dataclasses import dataclass
 
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 
 from kts_backend.store.database.sqlalchemy_base import db
@@ -28,6 +28,12 @@ class Game:
     created_at: datetime
     chat_id: int
     players: list[Player]
+
+
+class ChatModel(db):
+    __tablename__ = "chats"
+    chat_id = Column(Integer, primary_key=True)
+    game_is_active = Column(Boolean, default=False)
 
 
 class PlayerModel(db):

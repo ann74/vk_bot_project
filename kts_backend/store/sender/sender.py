@@ -23,4 +23,6 @@ class Sender:
     async def send_messages(self):
         while self.is_running:
             message = await self.store.sender.app.senders_queue.get()
+            if message.keyboard:
+                await self.store.sender.send_message_keyboard(message)
             await self.store.sender.send_message(message)

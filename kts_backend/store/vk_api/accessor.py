@@ -4,6 +4,7 @@ from typing import Optional
 from aiohttp import TCPConnector
 from aiohttp.client import ClientSession
 
+from kts_backend.game.models import Player
 from kts_backend.store.base.base_accessor import BaseAccessor
 from kts_backend.store.vk_api.dataclasses import Message, Update, UpdateObject
 from kts_backend.store.vk_api.poller import Poller
@@ -93,6 +94,38 @@ class VkApiAccessor(BaseAccessor):
                         user_id=raw_update["object"]["message"]["from_id"],
                         body=raw_update["object"]["message"]["text"],
                         peer_id=raw_update["object"]["message"]["peer_id"],
+                        action=raw_update["object"]["message"].get("action")
                     ),
                 )
+                if update.object.action:
+                    update.object.action = raw_update["object"]["message"]["action"]["type"]
+                    member_id = raw_update["object"]["message"]["action"].get("member_id")
+                    if member_id:
+                        update.object.user_id = member_id
                 await self.app.receivers_queue.put(update)
+
+    async def get_users(self, chat_id: int) -> list[Player]:
+        async with self.session.get(
+            self._build_query(
+                host=API_PATH,
+                method="messages.getConversationMembers",
+                params={
+                    "access_token": self.app.config.bot.token,
+                    "peer_id": 2000000000 + chat_id,
+                    "extended": 1,
+                },
+            )
+        ) as resp:
+            data = await resp.json()
+            users = data["profiles"]
+            players = []
+            for user in users:
+                players.append(
+                    Player(
+                        vk_id=user["id"],
+                        name=user["first_name"],
+                        last_name=user["last_name"],
+                        score=None,
+                    )
+                )
+        return players
