@@ -70,7 +70,7 @@ class VkApiAccessor(BaseAccessor):
             self.logger.info(self.server)
 
     async def poll(self):
-        self.app.logger.info("new poll request")
+        self.logger.info("new poll request")
         url = self._build_query(
             host=self.server,
             method="",

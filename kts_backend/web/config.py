@@ -31,6 +31,7 @@ class DatabaseConfig:
     user: str
     password: str
     database: str
+    url: str
 
 
 @dataclass
@@ -64,5 +65,6 @@ def setup_config(app: "Application", config_path: str):
             database=raw_config["database"]["database"],
             user=raw_config["database"]["user"],
             password=raw_config["database"]["password"],
+            url=raw_config["database"]["url"]
         ),
     )

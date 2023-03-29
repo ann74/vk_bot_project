@@ -34,6 +34,7 @@ class ChatModel(db):
     __tablename__ = "chats"
     chat_id = Column(Integer, primary_key=True)
     game_is_active = Column(Boolean, default=False)
+    game_start = Column(Boolean, default=False)
 
 
 class PlayerModel(db):
@@ -59,14 +60,14 @@ class GameModel(db):
     created_at = Column(DateTime(), default=datetime.now)
     chat_id = Column(Integer, nullable=False)
 
-    players = relationship("PlayerModel", secondary="GameScoreModel")
+    # players = relationship("PlayerModel", secondary="GameScoreModel")
 
     def to_dc(self) -> Game:
         return Game(
             id=self.id,
             created_at=self.created_at,
             chat_id=self.chat_id,
-            players=[player.to_dc for player in self.players],
+            # players=[player.to_dc for player in self.players],
         )
 
 

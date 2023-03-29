@@ -26,17 +26,10 @@ class Database(BaseAccessor):
 
     async def connect(self, *_: list, **__: dict) -> None:
         self._db = db
-        database_url = (
-            f"postgresql+asyncpg://{self.app.config.database.database}:"
-            f"{self.app.config.database.password}@"
-            f"{self.app.config.database.host}/{self.app.config.database.user}"
-        )
+        database_url = self.app.config.database.url
         self._engine = create_async_engine(database_url, echo=True, future=True)
         self.session = sessionmaker(
-            self._engine,
-            expire_on_commit=False,
-            autoflush=True,
-            class_=AsyncSession,
+            self._engine, expire_on_commit=False, class_=AsyncSession
         )
 
     async def disconnect(self, *_: list, **__: dict) -> None:

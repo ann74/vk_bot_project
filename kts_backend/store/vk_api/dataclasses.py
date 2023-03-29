@@ -19,7 +19,7 @@ class Update:
 
 @dataclass
 class Message:
-    user_id: int
     text: str
     peer_id: str
+    user_id: Optional[int] = None
     keyboard: Optional[str] = None

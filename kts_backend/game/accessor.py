@@ -2,9 +2,9 @@ import typing
 from datetime import datetime
 from typing import Optional
 
-from aiohttp import ClientSession, TCPConnector
-from sqlalchemy import select
+from sqlalchemy import select, and_, update
 
+from kts_backend.game.game_start import GameStart
 from kts_backend.store.base.base_accessor import BaseAccessor
 from kts_backend.game.models import (
     Player,
@@ -21,16 +21,22 @@ API_PATH = "https://api.vk.com/method/"
 
 
 class GameAccessor(BaseAccessor):
+    class Meta:
+        name = "gameaccessor"
+
     def __init__(self, app: "Application", *args, **kwargs):
         super().__init__(app, *args, **kwargs)
-        self.session: Optional[ClientSession] = None
+        self.gamestart: Optional[GameStart] = None
 
     async def connect(self, app: "Application"):
-        self.session = ClientSession(connector=TCPConnector(verify_ssl=False))
+        self.gamestart = GameStart(app)
+        self.logger.info("start gamestart")
+        await self.gamestart.start()
 
     async def disconnect(self, app: "Application"):
-        if self.session:
-            await self.session.close()
+        if self.gamestart and self.gamestart.is_running:
+            await self.gamestart.stop()
+
 
     # async def get_users(self, chat_id: int) -> list[Player]:
     #     async with self.session.get(
@@ -98,7 +104,19 @@ class GameAccessor(BaseAccessor):
 
     async def get_chats_id(self) -> list[int]:
         async with self.app.database.session.begin() as session:
-            query = (select(ChatModel).where(ChatModel.game_is_active == False))
-            chats = await session.execute(query)
-            chats_id = [obj.chat_id for obj in chats]
-            return chats_id
+            query = select(ChatModel).where(and_(ChatModel.game_is_active == False, ChatModel.game_start == False))
+            try:
+                chats = await session.execute(query)
+            except Exception as e:
+                self.logger.error('Exception get_chats_id', exc_info=e)
+        chats_id = [obj.chat_id for obj in chats.scalars()]
+        return chats_id
+
+    async def update_chat(self, chat_id: int, game_is_active: bool, game_start: bool) -> None:
+        async with self.app.database.session.begin() as session:
+            query = update(ChatModel).where(ChatModel.chat_id == chat_id).values(game_is_active=game_is_active,
+                                                                                 game_start=game_start)
+            try:
+                await session.execute(query)
+            except Exception as e:
+                self.logger.error('Exception update_chat', exc_info=e)
