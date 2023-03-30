@@ -15,6 +15,7 @@ class Handler:
     async def start(self):
         self.is_running = True
         self.handler_task = asyncio.create_task(self.handle_updates())
+        await self.store.game.game_process.start_message()
 
     async def stop(self):
         self.is_running = False

@@ -4,7 +4,7 @@ from typing import Optional
 
 from sqlalchemy import select, and_, update
 
-from kts_backend.game.game_start import GameStart
+from kts_backend.game.game_process import GameProcess
 from kts_backend.store.base.base_accessor import BaseAccessor
 from kts_backend.game.models import (
     Player,
@@ -26,43 +26,10 @@ class GameAccessor(BaseAccessor):
 
     def __init__(self, app: "Application", *args, **kwargs):
         super().__init__(app, *args, **kwargs)
-        self.gamestart: Optional[GameStart] = None
+        self.game_process = GameProcess(app)
 
-    async def connect(self, app: "Application"):
-        self.gamestart = GameStart(app)
-        self.logger.info("start gamestart")
-        await self.gamestart.start()
-
-    async def disconnect(self, app: "Application"):
-        if self.gamestart and self.gamestart.is_running:
-            await self.gamestart.stop()
-
-
-    # async def get_users(self, chat_id: int) -> list[Player]:
-    #     async with self.session.get(
-    #         self._build_query(
-    #             host=API_PATH,
-    #             method="messages.getConversationMembers",
-    #             params={
-    #                 "access_token": self.app.config.bot.token,
-    #                 "peer_id": 2000000000 + chat_id,
-    #                 "extended": 1,
-    #             },
-    #         )
-    #     ) as resp:
-    #         data = await resp.json()
-    #         users = data["profiles"]
-    #         players = []
-    #         for user in users:
-    #             players.append(
-    #                 Player(
-    #                     vk_id=user["id"],
-    #                     name=user["first_name"],
-    #                     last_name=user["last_name"],
-    #                     score=None,
-    #                 )
-    #             )
-    #     return players
+    # async def connect(self, app: "Application"):
+    #     self.game_process = GameProcess(app)
 
     async def create_user(self, player: Player):
         async with self.app.database.session.begin() as session:
@@ -102,9 +69,9 @@ class GameAccessor(BaseAccessor):
             last_game = games.scalars().last()
             return last_game.to_dc()
 
-    async def get_chats_id(self) -> list[int]:
+    async def get_chats_id(self) -> list[int]:  # ready
         async with self.app.database.session.begin() as session:
-            query = select(ChatModel).where(and_(ChatModel.game_is_active == False, ChatModel.game_start == False))
+            query = select(ChatModel).where(ChatModel.game_is_active == False)
             try:
                 chats = await session.execute(query)
             except Exception as e:
@@ -112,10 +79,9 @@ class GameAccessor(BaseAccessor):
         chats_id = [obj.chat_id for obj in chats.scalars()]
         return chats_id
 
-    async def update_chat(self, chat_id: int, game_is_active: bool, game_start: bool) -> None:
+    async def update_chat(self, chat_id: int, game_is_active: bool) -> None:
         async with self.app.database.session.begin() as session:
-            query = update(ChatModel).where(ChatModel.chat_id == chat_id).values(game_is_active=game_is_active,
-                                                                                 game_start=game_start)
+            query = update(ChatModel).where(ChatModel.chat_id == chat_id).values(game_is_active=game_is_active)
             try:
                 await session.execute(query)
             except Exception as e:

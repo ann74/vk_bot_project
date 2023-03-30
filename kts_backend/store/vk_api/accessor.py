@@ -1,3 +1,4 @@
+import json
 import typing
 from typing import Optional
 
@@ -6,7 +7,7 @@ from aiohttp.client import ClientSession
 
 from kts_backend.game.models import Player
 from kts_backend.store.base.base_accessor import BaseAccessor
-from kts_backend.store.vk_api.dataclasses import Message, Update, UpdateObject
+from kts_backend.store.vk_api.dataclasses import Update, UpdateObject
 from kts_backend.store.vk_api.poller import Poller
 
 if typing.TYPE_CHECKING:
@@ -87,21 +88,33 @@ class VkApiAccessor(BaseAccessor):
             self.ts = data["ts"]
             raw_updates = data["updates"]
             for raw_update in raw_updates:
-                update = Update(
-                    type=raw_update["type"],
-                    object=UpdateObject(
-                        id=raw_update["object"]["message"]["id"],
-                        user_id=raw_update["object"]["message"]["from_id"],
-                        body=raw_update["object"]["message"]["text"],
-                        peer_id=raw_update["object"]["message"]["peer_id"],
-                        action=raw_update["object"]["message"].get("action")
-                    ),
-                )
-                if update.object.action:
-                    update.object.action = raw_update["object"]["message"]["action"]["type"]
-                    member_id = raw_update["object"]["message"]["action"].get("member_id")
-                    if member_id:
-                        update.object.user_id = member_id
+                if raw_update["type"] == "message_new":
+                    update = Update(
+                        type=raw_update["type"],
+                        object=UpdateObject(
+                            user_id=raw_update["object"]["message"]["from_id"],
+                            body=raw_update["object"]["message"]["text"],
+                            peer_id=raw_update["object"]["message"]["peer_id"],
+                        ),
+                    )
+                    if raw_update["object"]["message"].get("action"):
+                        update.object.action = raw_update["object"]["message"]["action"]["type"]
+                        member_id = raw_update["object"]["message"]["action"].get("member_id")
+                        if member_id:
+                            update.object.user_id = member_id
+                    if raw_update["object"]["message"].get("payload"):
+                        update.object.button = json.loads(raw_update["object"]["message"]["payload"])["button"]
+                elif raw_update["type"] == "message_event":
+                    update = Update(
+                        type=raw_update["type"],
+                        object=UpdateObject(
+                            user_id=raw_update["object"]["user_id"],
+                            peer_id=raw_update["object"]["peer_id"],
+                            button=raw_update["object"]["payload"]["button"],
+                            event_id=raw_update["object"]["event_id"],
+                            conversation_message_id=raw_update["object"].get("conversation_message_id")
+                        ),
+                    )
                 await self.app.receivers_queue.put(update)
 
     async def get_users(self, chat_id: int) -> list[Player]:

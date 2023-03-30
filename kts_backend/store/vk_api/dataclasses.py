@@ -1,14 +1,16 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Union
 
 
 @dataclass
 class UpdateObject:
-    id: int
     user_id: int
-    body: str
     peer_id: str
-    action: Optional[str]
+    body: Optional[str] = None
+    action: Optional[str] = None
+    button: Optional[str] = None
+    event_id: Optional[str] = None
+    conversation_message_id: Optional[int] = None
 
 
 @dataclass
@@ -23,3 +25,5 @@ class Message:
     peer_id: str
     user_id: Optional[int] = None
     keyboard: Optional[str] = None
+    event_id: Optional[str] = None
+    conversation_message_id: Optional[int] = None

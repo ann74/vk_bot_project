@@ -2,7 +2,7 @@ from typing import Optional
 from datetime import datetime
 from dataclasses import dataclass
 
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, Text, Index
 from sqlalchemy.orm import relationship
 
 from kts_backend.store.database.sqlalchemy_base import db
@@ -11,7 +11,7 @@ from kts_backend.store.database.sqlalchemy_base import db
 @dataclass
 class GameScore:
     points: int
-    place: int
+    winner: bool
 
 
 @dataclass
@@ -27,6 +27,8 @@ class Game:
     id: int
     created_at: datetime
     chat_id: int
+    word: str
+    is_winner: bool
     players: list[Player]
 
 
@@ -34,7 +36,13 @@ class ChatModel(db):
     __tablename__ = "chats"
     chat_id = Column(Integer, primary_key=True)
     game_is_active = Column(Boolean, default=False)
-    game_start = Column(Boolean, default=False)
+
+
+class QuestionModel(db):
+    __tablename__ = "words"
+    id = Column(Integer, primary_key=True)
+    word = Column(String(100), nullable=False, unique=True)
+    description = Column(Text, nullable=False)
 
 
 class PlayerModel(db):
@@ -56,18 +64,27 @@ class PlayerModel(db):
 
 class GameModel(db):
     __tablename__ = "games"
+
     id = Column(Integer, primary_key=True)
     created_at = Column(DateTime(), default=datetime.now)
-    chat_id = Column(Integer, nullable=False)
+    chat_id = Column(Integer, index=True, nullable=False)
+    word = Column(String(100))
+    letters = Column(String(100))
+    current_move = Column(Integer)
+    is_active = Column(Boolean)
+    is_winner = Column(Boolean)
 
-    # players = relationship("PlayerModel", secondary="GameScoreModel")
+    players = relationship("PlayerModel", secondary="gamescore")
 
     def to_dc(self) -> Game:
         return Game(
             id=self.id,
             created_at=self.created_at,
             chat_id=self.chat_id,
-            # players=[player.to_dc for player in self.players],
+            word=self.word,
+            is_winner=self.is_winner,
+
+            players=[player.to_dc for player in self.players],
         )
 
 
@@ -81,7 +98,7 @@ class GameScoreModel(db):
         Integer, ForeignKey("players.vk_id", ondelete="CASCADE"), nullable=False
     )
     points = Column(Integer)
-    place = Column(Integer)
+    winner = Column(Boolean)
 
     def to_dc(self) -> GameScore:
-        return GameScore(points=self.points, place=self.place)
+        return GameScore(points=self.points, winner=self.winner)

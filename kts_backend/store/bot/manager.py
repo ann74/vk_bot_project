@@ -29,9 +29,17 @@ class BotManager(BaseAccessor):
 
     async def handle_updates(self, update: Update):
         self.logger.info(update)
-        message = Message(
-            user_id=update.object.user_id,
-            text=update.object.body,
-            peer_id=update.object.peer_id,
-        )
-        await self.app.senders_queue.put(message)
+        if update.object.button == "startgame":
+            await self.app.store.game.game_process.start_game(update)
+        elif update.object.button == "uniongame":
+            await self.app.store.game.game_process.union_game(update)
+
+
+
+
+        # message = Message(
+        #     user_id=update.object.user_id,
+        #     text=update.object.body,
+        #     peer_id=update.object.peer_id,
+        # )
+        # await self.app.senders_queue.put(message)
