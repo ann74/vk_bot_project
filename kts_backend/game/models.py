@@ -67,7 +67,8 @@ class GameModel(db):
 
     id = Column(Integer, primary_key=True)
     created_at = Column(DateTime(), default=datetime.now)
-    chat_id = Column(Integer, index=True, nullable=False)
+    chat_id = Column(ForeignKey("chats.chat_id"), index=True)
+    word_id = Column(ForeignKey("words.id"))
     word = Column(String(100))
     letters = Column(String(100))
     current_move = Column(Integer)
