@@ -33,7 +33,7 @@ class GameProcess:
 
     async def union_message(self, update: Update):
         message = Message(
-            text="Присоединяйтесь к игре, максимум 5 человек",
+            text=f"Присоединяйтесь к игре, максимум {self.max_members} человек",
             peer_id=update.object.peer_id,
             keyboard=union_keyboard,
         )
@@ -86,7 +86,7 @@ class GameProcess:
             else:
                 await self.app.store.game.create_player_in_game(vk_id=user_id, chat_id=chat_id)
                 name = await self.app.store.game.get_player_by_id(user_id)
-                self.players_queues[chat_id].append((user_id, name))
+                self.players_queues[chat_id].append([user_id, name, 0])
         if len(self.players_queues[chat_id]) == self.max_members:
             await self.app.store.game.update_game_move(chat_id=chat_id, current_move=self.players_queues[chat_id][0][0])
             word, letters, description = await self.app.store.game.get_word_info(chat_id=chat_id, with_description=True)
@@ -101,16 +101,33 @@ class GameProcess:
         )
         await self.app.senders_queue.put(message)
 
-    async def move_transition(self, chat_id: int, message_text: str):
-        current_player = self.players_queues[chat_id].popleft()
-        current_player[2] = 0
-        self.players_queues[chat_id].append(current_player)
+    async def game_finished(self, chat_id: int):
         message = Message(
-            text=message_text,
+            text="Игроков больше не осталось. Слово не разгадано. Победителя нет",
             peer_id=chat_id,
         )
         await self.app.senders_queue.put(message)
-        await self.move_player(chat_id)
+        del self.players_queues[chat_id]
+        await self.app.store.game.update_game_finished(chat_id=chat_id, is_winner=False)
+        await self.app.store.game.update_chat(chat_id=chat_id, game_is_active=False)
+        await self.start_message(id_=chat_id)
+
+    async def move_transition(self, chat_id: int, message_text: str, player_delete: bool = False):
+        self.app.store.game.logger.info("Ход переходит")
+        current_player = self.players_queues[chat_id].popleft()
+        if not player_delete:
+            current_player[2] = 0
+            self.players_queues[chat_id].append(current_player)
+        if len(self.players_queues[chat_id]) == 0:
+            await self.game_finished(chat_id)
+        else:
+            self.app.store.game.logger.info(f"Очередь после перехода {self.players_queues[chat_id]}")
+            message = Message(
+                text=message_text,
+                peer_id=chat_id,
+            )
+            await self.app.senders_queue.put(message)
+            await self.move_player(chat_id)
 
     async def drum_cooler(self, update: Update):
         chat_id, user_id = update.object.peer_id, update.object.user_id
@@ -122,13 +139,14 @@ class GameProcess:
                 await self.move_transition(chat_id, message_text)
             elif user_points == 'B':
                 message_text = 'Вы банкрот, все ваши очки сгорают. Ход переходит к следующему игроку.'
-                await self.app.store.game.update_player_score(vk_id=user_id, points=0)
+                await self.app.store.game.update_player_score(vk_id=user_id, chat_id=chat_id, points=0)
                 await self.move_transition(chat_id, message_text)
             else:
                 await self.answer_player(chat_id=chat_id, points=user_points)
+        else:
+            self.app.store.game.logger.info("Барабан покрутил не тот")
 
     async def right_letter(self, chat_id: int, word: str, name: str):
-        self.app.store.game.logger.info("Буква угадана")
         self.players_queues[chat_id][0][2] = 0
         message = Message(
             text=f"Есть такая буква!<br><br>{word}<br><br>@{name} продолжайте."
@@ -137,36 +155,105 @@ class GameProcess:
         )
         await self.app.senders_queue.put(message)
 
+    async def some_message(self, chat_id: int, message_text: str):
+        message = Message(
+            text=message_text,
+            peer_id=chat_id,
+        )
+        await self.app.senders_queue.put(message)
+
+    async def word_solved(self, chat_id: int, word: str, name: str, user_id: int):
+        points = await self.app.store.game.get_player_score(user_id)
+        message = Message(
+            text=f"Поздравляю! Вы угадали слово<br><br>{word}<br><br>@{name} вы набрали"
+                 f" {points} очков",
+            peer_id=chat_id,
+        )
+        await self.app.senders_queue.put(message)
+        del self.players_queues[chat_id]
+        await self.app.store.game.update_game_finished(chat_id=chat_id, is_winner=True)
+        await self.app.store.game.update_chat(chat_id=chat_id, game_is_active=False)
+        await self.start_message(id_=chat_id)
+
     async def check_letter(self, update: Update):
-        self.app.store.game.logger.info("Вызвана проверка буквы")
         chat_id, user_id = update.object.peer_id, update.object.user_id
         current_player = self.players_queues[chat_id][0]
-        self.app.store.game.logger.info(chat_id, user_id, current_player)
-        if user_id == current_player[0] and current_player[0][2] != 0:
-            self.app.store.game.logger.info("Букву назвал верный игрок")
+        if user_id == current_player[0] and current_player[2] != 0:
             word, letters, _ = await self.app.store.game.get_word_info(chat_id=chat_id, with_description=False)
             letters = set(letters)
             letter = update.object.body.lower()
             if letter in letters:
-                self.app.store.game.logger.info("Буква есть в слове")
                 letters.remove(letter)
                 points = current_player[2]
-                await self.app.store.game.update_player_score(vk_id=user_id, points=points)
-                await self.app.store.game.update_game_letters(chat_id=chat_id, letters=''.join(letters))
                 word_mask = self.get_word_mask(word, letters)
-                await self.right_letter(chat_id=chat_id, word=word_mask, name=current_player[1])
+                winner = True if not letters else False
+                await self.app.store.game.update_player_score(vk_id=user_id, chat_id=chat_id, points=points, winner=winner)
+                await self.app.store.game.update_game_letters(chat_id=chat_id, letters=''.join(letters))
+                if not letters:
+                    await self.word_solved(chat_id=chat_id, word=word_mask, user_id=user_id, name=current_player[1])
+                else:
+                    await self.right_letter(chat_id=chat_id, word=word_mask, name=current_player[1])
             else:
-                message_text = "К сожалению такой буквы нет в этом слове. Ход переходит к следующему игроку."
+                message_text = "К сожалению вы не правильно назвали букву. Ход переходит к следующему игроку."
                 await self.move_transition(chat_id, message_text)
+        elif user_id == current_player[0] and current_player[2] == 0:
+            message_text = "Нужно сначала покрутить барабан"
+            await self.some_message(chat_id, message_text)
         else:
-            self.app.store.game.logger.info("Букву назвал неверный игрок")
-
+            message_text = "Сейчас не ваш ход, не подсказывайте"
+            await self.some_message(chat_id, message_text)
 
     async def check_word(self, update: Update):
-        pass
+        chat_id, user_id = update.object.peer_id, update.object.user_id
+        current_player = self.players_queues[chat_id][0]
+        if user_id == current_player[0]:
+            word, letters, _ = await self.app.store.game.get_word_info(chat_id=chat_id, with_description=False)
+            user_word = update.object.body.lower()
+            if user_word == word:
+                word = ' '.join(list(word.upper()))
+                points = current_player[2]
+                await self.app.store.game.update_player_score(vk_id=user_id, chat_id=chat_id, points=points, winner=True)
+                await self.word_solved(chat_id=chat_id, word=word, user_id=user_id, name=current_player[1])
+            else:
+                message_text = f"@{current_player[1]} вы не верно назвали слово, поэтому покидаете игру." \
+                               f"<br>Ход переходит к следующему игроку"
+                await self.move_transition(chat_id=chat_id, message_text=message_text, player_delete=True)
+        else:
+            message_text = "Сейчас не ваш ход, не подсказывайте"
+            await self.some_message(chat_id, message_text)
 
     async def say_word(self, update: Update):
-        pass
+        chat_id, user_id = update.object.peer_id, update.object.user_id
+        current_player = self.players_queues[chat_id][0]
+        if user_id == current_player[0]:
+            base_text = "Внимание! Если вы не верно назовете слово, то выйдите из игры."
+            if current_player[2] == 0:
+                message_text = base_text + "<br>Вы можете крутить барабан или называйте слово"
+            else:
+                message_text = base_text + "<br>Вы можете назвать букву или слово"
+        else:
+            message_text = "Не ваш ход. Вы не можете называть слово"
+        await self.some_message(chat_id=chat_id, message_text=message_text)
 
-    async def leave_game(self, update: Update):
+    async def leave_game(self, update: Update, sign: str = 'игру'):
+        chat_id, user_id = update.object.peer_id, update.object.user_id
+        current_player = self.players_queues[chat_id][0]
+        if user_id == current_player[0]:
+            message_text = f"@{current_player[1]} покинул {sign}. Ход переходит к следующему игроку"
+            await self.move_transition(chat_id=chat_id, message_text=message_text, player_delete=True)
+        else:
+            self.app.store.game.logger.info("Кто-то покинул игру")
+            index = 0
+            for ind, member in enumerate(self.players_queues[chat_id]):
+                if member[0] == user_id:
+                    self.app.store.game.logger.info("Другой игрок покинул игру")
+                    index = ind
+                    break
+            if index:
+                self.app.store.game.logger.info("Удаляем покинвушего игру")
+                message_text = f"@{self.players_queues[chat_id][index]} покинул {sign}."
+                del self.players_queues[chat_id][index]
+                await self.some_message(chat_id=chat_id, message_text=message_text)
+
+    async def leave_chat(self, update: Update):
         pass

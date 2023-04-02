@@ -144,9 +144,24 @@ class GameAccessor(BaseAccessor):
             description = await session.execute(query)
         return description.scalars().first()
 
-    async def update_player_score(self, vk_id: int, points: int, winner: bool = False) -> None:
+    async def update_player_score(self, vk_id: int, chat_id: int, points: int, winner: bool = False) -> None:
+        game_id = await self.get_active_game(chat_id)
         async with self.app.database.session.begin() as session:
-            query = update(GameScoreModel).where(GameScoreModel.player_id == vk_id
+            query = update(GameScoreModel).where(and_(GameScoreModel.player_id == vk_id),
+                                                 (GameScoreModel.game_id == game_id)
                                                  ).values(points=points, winner=winner)
+            await session.execute(query)
+
+    async def get_player_score(self, vk_id: int) -> int:
+        async with self.app.database.session.begin() as session:
+            query = select(GameScoreModel.points).where(GameScoreModel.player_id == vk_id)
+            player_score = await session.execute(query)
+        return player_score.scalars().first()
+
+    async def update_game_finished(self, chat_id: int, is_winner: bool) -> None:
+        async with self.app.database.session.begin() as session:
+            query = update(GameModel).where(and_((GameModel.chat_id == chat_id),
+                                                 (GameModel.is_active == True))).values(is_active=False,
+                                                                                        is_winner=is_winner)
             await session.execute(query)
 

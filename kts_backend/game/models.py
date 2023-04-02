@@ -98,8 +98,8 @@ class GameScoreModel(db):
     player_id = Column(
         Integer, ForeignKey("players.vk_id", ondelete="CASCADE"), nullable=False
     )
-    points = Column(Integer)
-    winner = Column(Boolean)
+    points = Column(Integer, default=0)
+    winner = Column(Boolean, default=False)
 
     def to_dc(self) -> GameScore:
         return GameScore(points=self.points, winner=self.winner)
