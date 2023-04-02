@@ -24,5 +24,4 @@ class Handler:
     async def handle_updates(self):
         while self.is_running:
             update = await self.store.bots_manager.app.receivers_queue.get()
-            print(update)
             await self.store.bots_manager.handle_updates(update)

@@ -5,7 +5,7 @@ from typing import Optional, Union
 @dataclass
 class UpdateObject:
     user_id: int
-    peer_id: str
+    peer_id: int
     body: Optional[str] = None
     action: Optional[str] = None
     button: Optional[str] = None
@@ -22,7 +22,7 @@ class Update:
 @dataclass
 class Message:
     text: str
-    peer_id: str
+    peer_id: int
     user_id: Optional[int] = None
     keyboard: Optional[str] = None
     event_id: Optional[str] = None

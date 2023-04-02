@@ -45,25 +45,27 @@ class SenderAccessor(BaseAccessor):
         url += "&".join([f"{k}={v}" for k, v in params.items()])
         return url
 
+    # async def send_message(self, message: Message) -> None:
+    #     self.logger.info(message)
+    #     async with self.session.get(
+    #         self._build_query(
+    #             host=API_PATH,
+    #             method="messages.send",
+    #             params={
+    #                 "message": message.text,
+    #                 "access_token": self.app.config.bot.token,
+    #                 "peer_id": message.peer_id,
+    #                 "random_id": random.randint(1, 1000000),
+    #             },
+    #         )
+    #     ) as resp:
+    #         data = await resp.json()
+    #         self.logger.info(data)
+
     async def send_message(self, message: Message) -> None:
         self.logger.info(message)
-        async with self.session.get(
-            self._build_query(
-                host=API_PATH,
-                method="messages.send",
-                params={
-                    "message": message.text,
-                    "access_token": self.app.config.bot.token,
-                    "peer_id": message.peer_id,
-                    "random_id": random.randint(1, 1000000),
-                },
-            )
-        ) as resp:
-            data = await resp.json()
-            self.logger.info(data)
-
-    async def send_message_keyboard(self, message: Message) -> None:
-        self.logger.info(message)
+        if not message.keyboard:
+            message.keyboard = ''
         async with self.session.get(
             self._build_query(
                 host=API_PATH,
@@ -77,6 +79,8 @@ class SenderAccessor(BaseAccessor):
                 },
             )
         ) as resp:
+            if not resp.ok:
+                resp.raise_for_status()
             data = await resp.json()
             self.logger.info(data)
 

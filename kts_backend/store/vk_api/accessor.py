@@ -115,6 +115,8 @@ class VkApiAccessor(BaseAccessor):
                             conversation_message_id=raw_update["object"].get("conversation_message_id")
                         ),
                     )
+                else:
+                    raise NotImplementedError
                 await self.app.receivers_queue.put(update)
 
     async def get_users(self, chat_id: int) -> list[Player]:
@@ -124,7 +126,7 @@ class VkApiAccessor(BaseAccessor):
                 method="messages.getConversationMembers",
                 params={
                     "access_token": self.app.config.bot.token,
-                    "peer_id": 2000000000 + chat_id,
+                    "peer_id": chat_id,
                     "extended": 1,
                 },
             )

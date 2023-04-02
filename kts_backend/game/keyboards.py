@@ -63,7 +63,7 @@ main_keyboard = {
             {
                 "action": {
                     "type": "text",
-                    "payload": "{\"button\": \"baraban\"}",
+                    "payload": "{\"button\": \"drum\"}",
                     "label": "Крутить барабан"
                 },
                 "color": "primary"

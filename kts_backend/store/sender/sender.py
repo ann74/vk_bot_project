@@ -25,7 +25,5 @@ class Sender:
             message = await self.store.sender.app.senders_queue.get()
             if message.event_id:
                 await self.store.sender.message_edit(message)
-            elif message.keyboard:
-                await self.store.sender.send_message_keyboard(message)
             else:
                 await self.store.sender.send_message(message)

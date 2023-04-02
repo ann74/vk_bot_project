@@ -42,7 +42,6 @@ class GameAccessor(BaseAccessor):
                 score=None,
             )
             session.add(user)
-            # await session.commit()
 
     async def choice_word(self) -> tuple[int, str]:  # ready
         async with self.app.database.session.begin() as session:
@@ -56,7 +55,7 @@ class GameAccessor(BaseAccessor):
         letters_set = set(word[1:-1])
         if word[0] in letters_set:
             letters_set.remove(word[0])
-        if word[0] in letters_set:
+        if word[-1] in letters_set:
             letters_set.remove(word[-1])
         async with self.app.database.session.begin() as session:
             game = GameModel(
@@ -90,9 +89,8 @@ class GameAccessor(BaseAccessor):
         async with self.app.database.session.begin() as session:
             query = select(PlayerModel).where(PlayerModel.vk_id == vk_id)
             player = await session.execute(query)
-            await session.commit()
             player = player.scalars().first()
-        return player.name + ' ' + player.last_name
+        return f"{player.name} {player.last_name}"
 
     async def get_last_game(self, chat_id: int) -> Game:
         async with self.app.database.session.begin() as session:
@@ -112,18 +110,24 @@ class GameAccessor(BaseAccessor):
         chats_id = [obj.chat_id for obj in chats.scalars()]
         return chats_id
 
-    async def update_chat(self, chat_id: int, game_is_active: bool) -> None:
+    async def update_chat(self, chat_id: int, game_is_active: bool) -> None:  # ready
         async with self.app.database.session.begin() as session:
             query = update(ChatModel).where(ChatModel.chat_id == chat_id).values(game_is_active=game_is_active)
             await session.execute(query)
 
-    async def update_game_move(self, chat_id: int, current_move: int) -> None:
+    async def update_game_move(self, chat_id: int, current_move: int) -> None:  # ready
         async with self.app.database.session.begin() as session:
             query = update(GameModel).where(and_((GameModel.chat_id == chat_id),
                                                  (GameModel.is_active == True))).values(current_move=current_move)
             await session.execute(query)
 
-    async def get_word_info(self, chat_id: int, with_description: bool = False) -> tuple[str, str, Optional[str]]:
+    async def update_game_letters(self, chat_id: int, letters: str) -> None:  # ready
+        async with self.app.database.session.begin() as session:
+            query = update(GameModel).where(and_((GameModel.chat_id == chat_id),
+                                                 (GameModel.is_active == True))).values(letters=letters)
+            await session.execute(query)
+
+    async def get_word_info(self, chat_id: int, with_description: bool = False) -> tuple[str, str, Optional[str]]:  # ready
         async with self.app.database.session.begin() as session:
             query = select(GameModel).where(and_((GameModel.chat_id == chat_id), (GameModel.is_active == True)))
             game = await session.execute(query)
@@ -134,10 +138,15 @@ class GameAccessor(BaseAccessor):
             description = None
         return game.word, game.letters, description
 
-    async def get_word_description(self, word_id: int) -> str:
+    async def get_word_description(self, word_id: int) -> str:  # ready
         async with self.app.database.session.begin() as session:
-            query = select(QuestionModel).where(QuestionModel.id == word_id)
-            word = await session.execute(query)
-        word = word.scalars().first()
-        return word.description
+            query = select(QuestionModel.description).where(QuestionModel.id == word_id)
+            description = await session.execute(query)
+        return description.scalars().first()
+
+    async def update_player_score(self, vk_id: int, points: int, winner: bool = False) -> None:
+        async with self.app.database.session.begin() as session:
+            query = update(GameScoreModel).where(GameScoreModel.player_id == vk_id
+                                                 ).values(points=points, winner=winner)
+            await session.execute(query)
 

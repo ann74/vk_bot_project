@@ -33,6 +33,19 @@ class BotManager(BaseAccessor):
             await self.app.store.game.game_process.start_game(update)
         elif update.object.button == "uniongame":
             await self.app.store.game.game_process.union_game(update)
+        elif update.object.button == "drum":
+            await self.app.store.game.game_process.drum_cooler(update)
+        elif update.object.button == "word":
+            await self.app.store.game.game_process.say_word(update)
+        elif update.object.button == "leave":
+            await self.app.store.game.game_process.leave_game(update)
+        elif update.object.body and len(update.object.body) == 1:
+            await self.app.store.game.game_process.check_letter(update)
+        elif update.object.body and len(update.object.body.split()) == 1:
+            await self.app.store.game.game_process.check_word(update)
+
+        else:
+            raise NotImplementedError
 
 
 
