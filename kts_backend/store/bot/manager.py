@@ -1,6 +1,7 @@
 import typing
 from typing import Optional
 
+from kts_backend.game.models import Player
 from kts_backend.store.base.base_accessor import BaseAccessor
 from kts_backend.store.bot.handler import Handler
 from kts_backend.store.vk_api.dataclasses import Message, Update
@@ -29,7 +30,11 @@ class BotManager(BaseAccessor):
 
     async def handle_updates(self, update: Update):
         self.logger.info(update)
-        if update.object.button == "startgame":
+        if update.object.action == "chat_kick_user":
+            await self.app.store.game.game_process.leave_chat(update)
+        elif update.object.action in ("chat_invite_user", "chat_invite_user_by_link"):
+            await self.app.store.game.game_process.invite_chat(update)
+        elif update.object.button == "startgame":
             await self.app.store.game.game_process.start_game(update)
         elif update.object.button == "uniongame":
             await self.app.store.game.game_process.union_game(update)
@@ -46,13 +51,3 @@ class BotManager(BaseAccessor):
 
         else:
             raise NotImplementedError
-
-
-
-
-        # message = Message(
-        #     user_id=update.object.user_id,
-        #     text=update.object.body,
-        #     peer_id=update.object.peer_id,
-        # )
-        # await self.app.senders_queue.put(message)

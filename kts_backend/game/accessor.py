@@ -4,7 +4,6 @@ from random import choice
 from typing import Optional
 
 from sqlalchemy import select, and_, update
-from sqlalchemy.orm import joinedload
 
 from kts_backend.game.game_process import GameProcess
 from kts_backend.store.base.base_accessor import BaseAccessor
@@ -39,7 +38,6 @@ class GameAccessor(BaseAccessor):
                 vk_id=player.vk_id,
                 name=player.name,
                 last_name=player.last_name,
-                score=None,
             )
             session.add(user)
 
@@ -69,11 +67,11 @@ class GameAccessor(BaseAccessor):
             session.add(game)
         await self.create_player_in_game(vk_id=vk_id, game_id=game.id)
 
-    async def get_active_game(self, chat_id: int) -> int:
+    async def get_active_game(self, chat_id: int) -> Optional[int]:
         async with self.app.database.session.begin() as session:
-            query = select(GameModel).where(and_((GameModel.chat_id == chat_id), (GameModel.is_active == True)))
+            query = select(GameModel.id).where(and_((GameModel.chat_id == chat_id), (GameModel.is_active == True)))
             game = await session.execute(query)
-        return game.scalars().first().id
+        return game.scalars().first()
 
     async def create_player_in_game(self, vk_id: int, chat_id: Optional[int] = None, game_id: Optional[int] = None) -> None:   # ready
         if not game_id:
@@ -85,11 +83,13 @@ class GameAccessor(BaseAccessor):
             )
             session.add(player_game)
 
-    async def get_player_by_id(self, vk_id: int) -> str:  # ready
+    async def get_player_by_id(self, vk_id: int) -> Optional[str]:  # ready
         async with self.app.database.session.begin() as session:
             query = select(PlayerModel).where(PlayerModel.vk_id == vk_id)
             player = await session.execute(query)
             player = player.scalars().first()
+        if not player:
+            return None
         return f"{player.name} {player.last_name}"
 
     async def get_last_game(self, chat_id: int) -> Game:

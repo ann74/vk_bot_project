@@ -19,7 +19,7 @@ class Player:
     vk_id: int
     name: str
     last_name: str
-    score: Optional[GameScore]
+    score: Optional[GameScore] = None
 
 
 @dataclass

@@ -1,7 +1,7 @@
 import json
 
 start_keyboard = {
-    "one_time": True,
+    "one_time": False,
     "inline": False,
     "buttons": [
         [

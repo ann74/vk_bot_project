@@ -235,25 +235,38 @@ class GameProcess:
             message_text = "Не ваш ход. Вы не можете называть слово"
         await self.some_message(chat_id=chat_id, message_text=message_text)
 
-    async def leave_game(self, update: Update, sign: str = 'игру'):
+    async def leave_game(self, update: Update):
         chat_id, user_id = update.object.peer_id, update.object.user_id
         current_player = self.players_queues[chat_id][0]
         if user_id == current_player[0]:
-            message_text = f"@{current_player[1]} покинул {sign}. Ход переходит к следующему игроку"
+            message_text = f"@{current_player[1]} покинул игру. Ход переходит к следующему игроку"
             await self.move_transition(chat_id=chat_id, message_text=message_text, player_delete=True)
         else:
-            self.app.store.game.logger.info("Кто-то покинул игру")
             index = 0
             for ind, member in enumerate(self.players_queues[chat_id]):
                 if member[0] == user_id:
-                    self.app.store.game.logger.info("Другой игрок покинул игру")
                     index = ind
                     break
             if index:
-                self.app.store.game.logger.info("Удаляем покинвушего игру")
-                message_text = f"@{self.players_queues[chat_id][index]} покинул {sign}."
+                name = self.players_queues[chat_id][index][1]
+                message_text = f"@{name} покинул игру."
                 del self.players_queues[chat_id][index]
                 await self.some_message(chat_id=chat_id, message_text=message_text)
 
     async def leave_chat(self, update: Update):
-        pass
+        chat_id = update.object.peer_id
+        active_game = await self.app.store.game.get_active_game(chat_id)
+        if active_game:
+            await self.leave_game(update)
+
+    async def invite_chat(self, update: Update):
+        chat_id = update.object.peer_id
+        player_base = await self.app.store.game.get_player_by_id(update.object.user_id)
+        self.app.store.game.logger.info(player_base)
+        if not player_base:
+            player = await self.app.store.vk_api.get_user_by_id(update.object.user_id)
+            await self.app.store.game.create_user(player)
+        # active_game = await self.app.store.game.get_active_game(chat_id)
+        # if not active_game:
+        #     await self.start_message(chat_id)
+

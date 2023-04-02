@@ -119,7 +119,7 @@ class VkApiAccessor(BaseAccessor):
                     raise NotImplementedError
                 await self.app.receivers_queue.put(update)
 
-    async def get_users(self, chat_id: int) -> list[Player]:
+    async def get_users_from_chat(self, chat_id: int) -> list[Player]:
         async with self.session.get(
             self._build_query(
                 host=API_PATH,
@@ -144,3 +144,23 @@ class VkApiAccessor(BaseAccessor):
                     )
                 )
         return players
+
+    async def get_user_by_id(self, vk_id: int) -> Player:
+        async with self.session.get(
+            self._build_query(
+                host=API_PATH,
+                method="users.get",
+                params={
+                    "access_token": self.app.config.bot.token,
+                    "user_ids": str(vk_id),
+                },
+            )
+        ) as resp:
+            data = await resp.json()
+            self.logger.info(data)
+            player = Player(
+                vk_id=vk_id,
+                name=data["response"][0]["first_name"],
+                last_name=data["response"][0]["last_name"],
+            )
+        return player
