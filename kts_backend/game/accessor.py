@@ -17,7 +17,6 @@ from kts_backend.game.models import (
 if typing.TYPE_CHECKING:
     from kts_backend.web.app import Application
 
-
 API_PATH = "https://api.vk.com/method/"
 
 
@@ -28,9 +27,6 @@ class GameAccessor(BaseAccessor):
     def __init__(self, app: "Application", *args, **kwargs):
         super().__init__(app, *args, **kwargs)
         self.game_process = GameProcess(app)
-
-    # async def connect(self, app: "Application"):
-    #     self.game_process = GameProcess(app)
 
     async def create_user(self, player: Player):
         async with self.app.database.session.begin() as session:
@@ -73,7 +69,8 @@ class GameAccessor(BaseAccessor):
             game = await session.execute(query)
         return game.scalars().first()
 
-    async def create_player_in_game(self, vk_id: int, chat_id: Optional[int] = None, game_id: Optional[int] = None) -> None:   # ready
+    async def create_player_in_game(self, vk_id: int, chat_id: Optional[int] = None,
+                                    game_id: Optional[int] = None) -> None:  # ready
         if not game_id:
             game_id = await self.get_active_game(chat_id)
         async with self.app.database.session.begin() as session:
@@ -127,7 +124,8 @@ class GameAccessor(BaseAccessor):
                                                  (GameModel.is_active == True))).values(letters=letters)
             await session.execute(query)
 
-    async def get_word_info(self, chat_id: int, with_description: bool = False) -> tuple[str, str, Optional[str]]:  # ready
+    async def get_word_info(self, chat_id: int, with_description: bool = False) -> tuple[
+        str, str, Optional[str]]:  # ready
         async with self.app.database.session.begin() as session:
             query = select(GameModel).where(and_((GameModel.chat_id == chat_id), (GameModel.is_active == True)))
             game = await session.execute(query)
@@ -144,17 +142,23 @@ class GameAccessor(BaseAccessor):
             description = await session.execute(query)
         return description.scalars().first()
 
-    async def update_player_score(self, vk_id: int, chat_id: int, points: int, winner: bool = False) -> None:
+    async def update_player_score(self, vk_id: int, chat_id: int, points: int, winner: bool = False, bankrot: bool = False) -> None:
         game_id = await self.get_active_game(chat_id)
         async with self.app.database.session.begin() as session:
-            query = update(GameScoreModel).where(and_(GameScoreModel.player_id == vk_id),
-                                                 (GameScoreModel.game_id == game_id)
-                                                 ).values(points=points, winner=winner)
+            if bankrot:
+                query = update(GameScoreModel).where(and_(GameScoreModel.player_id == vk_id,
+                                                          GameScoreModel.game_id == game_id)
+                                                     ).values(points=0, winner=winner)
+            else:
+                query = update(GameScoreModel).where(and_(GameScoreModel.player_id == vk_id,
+                                                          GameScoreModel.game_id == game_id)
+                                                     ).values(points=GameScoreModel.points + points, winner=winner)
             await session.execute(query)
 
     async def get_player_score(self, vk_id: int) -> int:
         async with self.app.database.session.begin() as session:
-            query = select(GameScoreModel.points).where(GameScoreModel.player_id == vk_id)
+            query = select(GameScoreModel.points).join(GameModel).where(and_(GameScoreModel.player_id == vk_id,
+                                                                             GameModel.is_active == True))
             player_score = await session.execute(query)
         return player_score.scalars().first()
 
@@ -164,4 +168,3 @@ class GameAccessor(BaseAccessor):
                                                  (GameModel.is_active == True))).values(is_active=False,
                                                                                         is_winner=is_winner)
             await session.execute(query)
-

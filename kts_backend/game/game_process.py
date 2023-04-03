@@ -61,11 +61,12 @@ class GameProcess:
 
     async def start_game(self, update: Update):
         chat_id, user_id = update.object.peer_id, update.object.user_id
-        await self.app.store.game.create_game(chat_id=chat_id, vk_id=user_id)
-        await self.app.store.game.update_chat(chat_id=chat_id, game_is_active=True)
-        await self.union_message(update)
         name = await self.app.store.game.get_player_by_id(user_id)
-        self.players_queues[chat_id].append([user_id, name, 0])
+        if name:
+            await self.app.store.game.create_game(chat_id=chat_id, vk_id=user_id)
+            await self.app.store.game.update_chat(chat_id=chat_id, game_is_active=True)
+            await self.union_message(update)
+            self.players_queues[chat_id].append([user_id, name, 0])
 
     @staticmethod
     def get_word_mask(word: str, letters_mask: set) -> str:
@@ -84,9 +85,10 @@ class GameProcess:
                 if member[0] == user_id:
                     break
             else:
-                await self.app.store.game.create_player_in_game(vk_id=user_id, chat_id=chat_id)
                 name = await self.app.store.game.get_player_by_id(user_id)
-                self.players_queues[chat_id].append([user_id, name, 0])
+                if name:
+                    await self.app.store.game.create_player_in_game(vk_id=user_id, chat_id=chat_id)
+                    self.players_queues[chat_id].append([user_id, name, 0])
         if len(self.players_queues[chat_id]) == self.max_members:
             await self.app.store.game.update_game_move(chat_id=chat_id, current_move=self.players_queues[chat_id][0][0])
             word, letters, description = await self.app.store.game.get_word_info(chat_id=chat_id, with_description=True)
@@ -139,7 +141,7 @@ class GameProcess:
                 await self.move_transition(chat_id, message_text)
             elif user_points == 'B':
                 message_text = 'Вы банкрот, все ваши очки сгорают. Ход переходит к следующему игроку.'
-                await self.app.store.game.update_player_score(vk_id=user_id, chat_id=chat_id, points=0)
+                await self.app.store.game.update_player_score(vk_id=user_id, chat_id=chat_id, points=0, bankrot=True)
                 await self.move_transition(chat_id, message_text)
             else:
                 await self.answer_player(chat_id=chat_id, points=user_points)
@@ -260,13 +262,10 @@ class GameProcess:
             await self.leave_game(update)
 
     async def invite_chat(self, update: Update):
-        chat_id = update.object.peer_id
         player_base = await self.app.store.game.get_player_by_id(update.object.user_id)
         self.app.store.game.logger.info(player_base)
         if not player_base:
             player = await self.app.store.vk_api.get_user_by_id(update.object.user_id)
             await self.app.store.game.create_user(player)
-        # active_game = await self.app.store.game.get_active_game(chat_id)
-        # if not active_game:
-        #     await self.start_message(chat_id)
+
 

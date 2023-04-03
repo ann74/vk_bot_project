@@ -84,21 +84,3 @@ class SenderAccessor(BaseAccessor):
         ) as resp:
             data = await resp.json()
             self.logger.info(data)
-
-    # async def send_message_event_answer(self, message: Message) -> None:
-    #     self.logger.info(message)
-    #     async with self.session.get(
-    #             self._build_query(
-    #                 host=API_PATH,
-    #                 method="messages.sendMessageEventAnswer",
-    #                 params={
-    #                     "message": message.text,
-    #                     "access_token": self.app.config.bot.token,
-    #                     "peer_id": message.peer_id,
-    #                     "random_id": random.randint(1, 1000000),
-    #                     "keyboard": message.keyboard,
-    #                 },
-    #             )
-    #     ) as resp:
-    #         data = await resp.json()
-    #         self.logger.info(data)
