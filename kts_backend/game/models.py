@@ -15,6 +15,13 @@ class GameScore:
 
 
 @dataclass
+class Question:
+    id: int
+    word: str
+    description: str
+
+
+@dataclass
 class Player:
     vk_id: int
     name: str
