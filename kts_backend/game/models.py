@@ -35,6 +35,7 @@ class Game:
     created_at: datetime
     chat_id: int
     word: str
+    letters: Optional[str]
     is_winner: bool
     players: list[Player]
 
@@ -51,6 +52,15 @@ class QuestionModel(db):
     word = Column(String(100), nullable=False, unique=True)
     description = Column(Text, nullable=False)
 
+# gamescore = Table('gamescore',
+#                   db.metadata,
+#                   Column('game_id', Integer, ForeignKey('games.id'), ondelete="CASCADE", nullable=False),
+#                   Column('player_id', Integer, ForeignKey('players.vk_id'), ondelete="CASCADE", nullable=False),
+#                   Column('points', Integer),
+#                   Column('winner', Boolean),
+#                   )
+#
+
 
 class PlayerModel(db):
     __tablename__ = "players"
@@ -58,7 +68,7 @@ class PlayerModel(db):
     name = Column(String(100), nullable=False)
     last_name = Column(String(100), nullable=True)
 
-    score = relationship("GameScoreModel")
+    score = relationship("GameScoreModel", back_populates="player")
 
     def to_dc(self) -> Player:
         return Player(
@@ -67,15 +77,6 @@ class PlayerModel(db):
             last_name=self.last_name,
             score=self.score.to_dc(),
         )
-
-
-# gamescore = Table('gamescore',
-#                   db.metadata,
-#                   Column('game_id', Integer, ForeignKey('games.id')),
-#                   Column('player_id', Integer, ForeignKey('players.vk_id')),
-#                   Column('points', Integer),
-#                   Column('winner', Boolean),
-#                   )
 
 
 class GameModel(db):
@@ -91,7 +92,7 @@ class GameModel(db):
     is_active = Column(Boolean)
     is_winner = Column(Boolean)
 
-    players = relationship("PlayerModel", secondary=gamescore)
+    players = relationship("GameScoreModel", back_populates="game")
 
     def to_dc(self) -> Game:
         return Game(
@@ -107,7 +108,6 @@ class GameModel(db):
 
 class GameScoreModel(db):
     __tablename__ = "gamescore"
-    # __table_args__ = {'extend_existing': True}
 
     id = Column(Integer, primary_key=True)
     game_id = Column(
@@ -118,6 +118,9 @@ class GameScoreModel(db):
     )
     points = Column(Integer, default=0)
     winner = Column(Boolean, default=False)
+
+    player = relationship("PlayerModel", back_populates="score")
+    game = relationship("GameModel", back_populates="players")
 
     def to_dc(self) -> GameScore:
         return GameScore(points=self.points, winner=self.winner)

@@ -1,5 +1,6 @@
 from collections import deque, defaultdict
 from random import choice
+from datetime import datetime
 import typing
 
 from typing import Optional
@@ -135,16 +136,20 @@ class GameProcess:
         chat_id, user_id = update.object.peer_id, update.object.user_id
         current_player = self.players_queues[chat_id][0]
         if user_id == current_player[0]:
-            user_points = choice(self.points)
-            if user_points == 0:
-                message_text = 'У вас 0 на барабане, переход хода.'
-                await self.move_transition(chat_id, message_text)
-            elif user_points == 'B':
-                message_text = 'Вы банкрот, все ваши очки сгорают. Ход переходит к следующему игроку.'
-                await self.app.store.game.update_player_score(vk_id=user_id, chat_id=chat_id, points=0, bankrot=True)
-                await self.move_transition(chat_id, message_text)
+            if current_player[2] != 0:
+                message = "Вы уже покрутили барабан, называйте букву или слово"
+                await self.some_message(chat_id=chat_id, message_text=message)
             else:
-                await self.answer_player(chat_id=chat_id, points=user_points)
+                user_points = choice(self.points)
+                if user_points == 0:
+                    message_text = 'У вас 0 на барабане, переход хода.'
+                    await self.move_transition(chat_id, message_text)
+                elif user_points == 'B':
+                    message_text = 'Вы банкрот, все ваши очки сгорают. Ход переходит к следующему игроку.'
+                    await self.app.store.game.update_player_score(vk_id=user_id, chat_id=chat_id, points=0, bankrot=True)
+                    await self.move_transition(chat_id, message_text)
+                else:
+                    await self.answer_player(chat_id=chat_id, points=user_points)
         else:
             self.app.store.game.logger.info("Барабан покрутил не тот")
 
@@ -272,5 +277,18 @@ class GameProcess:
         chat_id = update.object.peer_id
         game_info = await self.app.store.game.get_last_game(chat_id=chat_id)
         self.app.store.game.logger.info(game_info)
+        if not game_info.is_winner:
+            word = self.get_word_mask(game_info.word, game_info.letters)
+        else:
+            word = ' '.join(list(game_info.word)).upper()
+        players_info = []
+        for player in game_info.players:
+            players_info.append(f"@{player.name}, {player.score.points} очков,"
+                                f" {'Победитель' if player.score.winner else ''}")
+        winner = 'Есть победитель' if game_info.is_winner else 'Победителя нет'
+        message = f"Игра начата {game_info.created_at.strftime('%d.%m.%y %H:%M:%S')}<br>" \
+                  f"{winner}<br>Загаданное слово - {word}<br>Игроки:<br>" \
+                  f"{'<br>'.join(players_info)}"
+        await self.some_message(chat_id=chat_id, message_text=message)
 
 

@@ -4,6 +4,7 @@ from random import choice
 from typing import Optional
 
 from sqlalchemy import select, and_, update
+from sqlalchemy.orm import joinedload
 
 from kts_backend.game.game_process import GameProcess
 from kts_backend.store.base.base_accessor import BaseAccessor
@@ -91,24 +92,23 @@ class GameAccessor(BaseAccessor):
 
     async def get_last_game(self, chat_id: int) -> Game:
         async with self.app.database.session.begin() as session:
-            query = (
-                select(GameModel)
-                .where(GameModel.chat_id == chat_id)
+            query = select(GameModel).options(joinedload(GameModel.players))\
+                .where(GameModel.chat_id == chat_id)\
                 .order_by(GameModel.created_at.desc())
-            )
-            games = await session.execute(query)
-            last_game = games.scalars().first()
-        self.logger.info((last_game.id, last_game.word, last_game.is_winner))
-        self.logger.info(last_game.players)
+            last_game = await session.execute(query)
+            last_game = last_game.scalars().first()
+        players = []
+        for player in last_game.players:
+            player_name = await self.get_player_by_id(vk_id=player.player_id)
+            players.append(Player(vk_id=player.player_id, name=player_name, last_name='', score=GameScore(
+                points=player.points, winner=player.winner)))
         return Game(id=last_game.id,
                     created_at=last_game.created_at,
                     chat_id=last_game.chat_id,
                     word=last_game.word,
+                    letters=last_game.letters,
                     is_winner=last_game.is_winner,
-                    players=[Player(vk_id=player.vk_id, name=player.name,
-                                    last_name=player.last_name,
-                                    score=GameScore(points=player.score.points, winner=player.score.winner))
-                             for player in last_game.players],
+                    players=players,
                     )
 
     async def get_chats_id(self) -> list[int]:  # ready
