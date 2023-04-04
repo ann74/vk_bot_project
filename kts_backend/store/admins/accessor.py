@@ -50,11 +50,10 @@ class AdminAccessor(BaseAccessor):
             session.add(question)
         return Question(id=question.id, word=question.word, description=question.description)
 
-    async def question_list(self, search_word: Optional[str]):
+    async def question_list(self, search: Optional[str]):
         async with self.app.database.session.begin() as session:
-            if search_word:
-                search_word = f"%{search_word}%"
-                query = select(QuestionModel).where(QuestionModel.word.like(search_word))
+            if search:
+                query = select(QuestionModel).where(QuestionModel.word.like(f'%{search}%'))
             else:
                 query = select(QuestionModel)
             questions = await session.execute(query)

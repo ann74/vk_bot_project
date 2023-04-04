@@ -34,6 +34,8 @@ class BotManager(BaseAccessor):
             await self.app.store.game.game_process.leave_chat(update)
         elif update.object.action in ("chat_invite_user", "chat_invite_user_by_link"):
             await self.app.store.game.game_process.invite_chat(update)
+        elif update.object.button == "info":
+            await self.app.store.game.game_process.game_info(update)
         elif update.object.button == "startgame":
             await self.app.store.game.game_process.start_game(update)
         elif update.object.button == "uniongame":

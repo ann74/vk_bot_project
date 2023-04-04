@@ -268,4 +268,9 @@ class GameProcess:
             player = await self.app.store.vk_api.get_user_by_id(update.object.user_id)
             await self.app.store.game.create_user(player)
 
+    async def game_info(self, update: Update):
+        chat_id = update.object.peer_id
+        game_info = await self.app.store.game.get_last_game(chat_id=chat_id)
+        self.app.store.game.logger.info(game_info)
+
 

@@ -13,6 +13,16 @@ start_keyboard = {
                 },
                 "color": "positive"
             },
+        ],
+        [
+            {
+                "action": {
+                    "type": "text",
+                    "payload": "{\"button\": \"info\"}",
+                    "label": "Информация о последней игре"
+                },
+                "color": "negative"
+            },
         ]
     ]
 }

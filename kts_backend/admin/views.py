@@ -57,7 +57,8 @@ class QuestionListView(AuthRequiredMixin, View):
     @querystring_schema(SearchWordSchema)
     @response_schema(QuestionSchema, 200)
     async def get(self):
-        search_word = self.data.get('search')
+        search_word = self.request.query.get("search")
+        self.store.admins.logger.info(search_word)
         questions = await self.store.admins.question_list(search_word)
         return json_response(data=QuestionListSchema().dump({"questions": questions}))
 
@@ -65,5 +66,4 @@ class QuestionListView(AuthRequiredMixin, View):
 class Hello(View):
     async def get(self):
         response_data = "Hello"
-
         return json_response(data=response_data)

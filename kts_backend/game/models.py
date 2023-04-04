@@ -2,7 +2,7 @@ from typing import Optional
 from datetime import datetime
 from dataclasses import dataclass
 
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, Text, Index
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, Text, Index, Table
 from sqlalchemy.orm import relationship
 
 from kts_backend.store.database.sqlalchemy_base import db
@@ -69,6 +69,15 @@ class PlayerModel(db):
         )
 
 
+# gamescore = Table('gamescore',
+#                   db.metadata,
+#                   Column('game_id', Integer, ForeignKey('games.id')),
+#                   Column('player_id', Integer, ForeignKey('players.vk_id')),
+#                   Column('points', Integer),
+#                   Column('winner', Boolean),
+#                   )
+
+
 class GameModel(db):
     __tablename__ = "games"
 
@@ -82,7 +91,7 @@ class GameModel(db):
     is_active = Column(Boolean)
     is_winner = Column(Boolean)
 
-    players = relationship("PlayerModel", secondary="gamescore")
+    players = relationship("PlayerModel", secondary=gamescore)
 
     def to_dc(self) -> Game:
         return Game(
@@ -98,6 +107,8 @@ class GameModel(db):
 
 class GameScoreModel(db):
     __tablename__ = "gamescore"
+    # __table_args__ = {'extend_existing': True}
+
     id = Column(Integer, primary_key=True)
     game_id = Column(
         Integer, ForeignKey("games.id", ondelete="CASCADE"), nullable=False
