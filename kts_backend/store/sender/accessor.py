@@ -56,9 +56,45 @@ class SenderAccessor(BaseAccessor):
                 params={
                     "message": message.text,
                     "access_token": self.app.config.bot.token,
-                    "peer_id": message.peer_id,
+                    "peer_ids": f'{message.peer_id},',
                     "random_id": random.randint(1, 1000000),
                     "keyboard": message.keyboard,
+                },
+            )
+        ) as resp:
+            if not resp.ok:
+                resp.raise_for_status()
+            data = await resp.json()
+            self.logger.info(data)
+        return data['response'][0]['conversation_message_id']
+
+    async def pin_message(self, message: Message) -> None:
+        self.logger.info(message)
+        async with self.session.get(
+            self._build_query(
+                host=API_PATH,
+                method="messages.pin",
+                params={
+                    "access_token": self.app.config.bot.token,
+                    "peer_id": message.peer_id,
+                    "conversation_message_id": message.conversation_message_id,
+                },
+            )
+        ) as resp:
+            if not resp.ok:
+                resp.raise_for_status()
+            data = await resp.json()
+            self.logger.info(data)
+
+    async def unpin_message(self, message: Message) -> None:
+        self.logger.info(message)
+        async with self.session.get(
+            self._build_query(
+                host=API_PATH,
+                method="messages.unpin",
+                params={
+                    "access_token": self.app.config.bot.token,
+                    "peer_id": message.peer_id,
                 },
             )
         ) as resp:

@@ -1,6 +1,7 @@
+import asyncio
 from collections import deque, defaultdict
 from random import choice
-from datetime import datetime
+import time
 import typing
 
 from typing import Optional
@@ -15,9 +16,11 @@ if typing.TYPE_CHECKING:
 class GameProcess:
     def __init__(self, app: "Application"):
         self.app = app
-        self.max_members = 2
+        self.max_members = 5
         self.players_queues = defaultdict(deque)  # Хранит по ключу чатов, в которых активна игра, очередь игроков сразу с именами и с очками в текущем хожу
         self.points = [0, 10, 20, 50, 100, 150, 200, 500, 'B']
+        self.timeouts = {}  # Хранит по ключу чатов запущен таймаут или нет для присоединения к игре
+        self.pins = {}  # Хранит идентефикаторы запиненых сообщений заданий
 
     async def start_message(self, id_: Optional[int] = None):
         if not id_:
@@ -34,7 +37,7 @@ class GameProcess:
 
     async def union_message(self, update: Update):
         message = Message(
-            text=f"Присоединяйтесь к игре, максимум {self.max_members} человек",
+            text=f"Присоединяйтесь к игре, минимум 2 участника, максимум {self.max_members}.",
             peer_id=update.object.peer_id,
             keyboard=union_keyboard,
         )
@@ -53,11 +56,18 @@ class GameProcess:
         for player in self.players_queues[chat_id]:
             players.append('@' + player[1])
         message = Message(
-            text=f"Начинаем!<br>В игре {', '.join(players)}.<br><br>Вопрос: {description}<br><br>{word}",
+            text=f"Начинаем!<br>В игре {', '.join(players)}.<br>Вопрос: {description}<br>{word}",
             peer_id=chat_id,
             keyboard=main_keyboard,
         )
-        await self.app.senders_queue.put(message)
+        # await self.app.senders_queue.put(message)
+        conversation_message_id = await self.app.store.sender.send_message(message)
+        message_pin = Message(
+            peer_id=chat_id,
+            conversation_message_id=conversation_message_id,
+        )
+        self.pins[chat_id] = conversation_message_id
+        await self.app.store.sender.pin_message(message_pin)
         await self.move_player(chat_id)
 
     async def start_game(self, update: Update):
@@ -79,6 +89,14 @@ class GameProcess:
                 res.append(letter)
         return ' '.join(res).upper()
 
+    async def start_game_process(self, chat_id: int):
+        # if self.timeouts[chat_id] == 1:
+        self.timeouts[chat_id] = 0
+        await self.app.store.game.update_game_move(chat_id=chat_id, current_move=self.players_queues[chat_id][0][0])
+        word, letters, description = await self.app.store.game.get_word_info(chat_id=chat_id, with_description=True)
+        word_mask = self.get_word_mask(word, set(letters))
+        await self.main_message(chat_id, word=word_mask, description=description)
+
     async def union_game(self, update: Update):
         chat_id, user_id = update.object.peer_id, update.object.user_id
         if len(self.players_queues[chat_id]) < self.max_members:
@@ -90,11 +108,16 @@ class GameProcess:
                 if name:
                     await self.app.store.game.create_player_in_game(vk_id=user_id, chat_id=chat_id)
                     self.players_queues[chat_id].append([user_id, name, 0])
+        if len(self.players_queues[chat_id]) == 2:
+            self.timeouts[chat_id] = 1
+            asyncio.create_task(self.timout(chat_id=chat_id))
         if len(self.players_queues[chat_id]) == self.max_members:
-            await self.app.store.game.update_game_move(chat_id=chat_id, current_move=self.players_queues[chat_id][0][0])
-            word, letters, description = await self.app.store.game.get_word_info(chat_id=chat_id, with_description=True)
-            word_mask = self.get_word_mask(word, set(letters))
-            await self.main_message(chat_id, word=word_mask, description=description)
+            await self.start_game_process(chat_id=chat_id)
+
+    async def timout(self, chat_id: int):
+        await asyncio.sleep(15)
+        if self.timeouts[chat_id] == 1:
+            await self.start_game_process(chat_id=chat_id)
 
     async def answer_player(self, chat_id: int, points: int):
         self.players_queues[chat_id][0][2] = points
@@ -113,6 +136,7 @@ class GameProcess:
         del self.players_queues[chat_id]
         await self.app.store.game.update_game_finished(chat_id=chat_id, is_winner=False)
         await self.app.store.game.update_chat(chat_id=chat_id, game_is_active=False)
+        await self.app.store.sender.unpin_message(Message(peer_id=chat_id))
         await self.start_message(id_=chat_id)
 
     async def move_transition(self, chat_id: int, message_text: str, player_delete: bool = False):
@@ -180,6 +204,7 @@ class GameProcess:
         del self.players_queues[chat_id]
         await self.app.store.game.update_game_finished(chat_id=chat_id, is_winner=True)
         await self.app.store.game.update_chat(chat_id=chat_id, game_is_active=False)
+        await self.app.store.sender.unpin_message(Message(peer_id=chat_id))
         await self.start_message(id_=chat_id)
 
     async def check_letter(self, update: Update):
@@ -206,9 +231,9 @@ class GameProcess:
         elif user_id == current_player[0] and current_player[2] == 0:
             message_text = "Нужно сначала покрутить барабан"
             await self.some_message(chat_id, message_text)
-        else:
-            message_text = "Сейчас не ваш ход, не подсказывайте"
-            await self.some_message(chat_id, message_text)
+        # else:
+        #     message_text = "Сейчас не ваш ход, не подсказывайте"
+        #     await self.some_message(chat_id, message_text)
 
     async def check_word(self, update: Update):
         chat_id, user_id = update.object.peer_id, update.object.user_id
@@ -225,9 +250,9 @@ class GameProcess:
                 message_text = f"@{current_player[1]} вы не верно назвали слово, поэтому покидаете игру." \
                                f"<br>Ход переходит к следующему игроку"
                 await self.move_transition(chat_id=chat_id, message_text=message_text, player_delete=True)
-        else:
-            message_text = "Сейчас не ваш ход, не подсказывайте"
-            await self.some_message(chat_id, message_text)
+        # else:
+        #     message_text = "Сейчас не ваш ход, не подсказывайте"
+        #     await self.some_message(chat_id, message_text)
 
     async def say_word(self, update: Update):
         chat_id, user_id = update.object.peer_id, update.object.user_id
@@ -238,9 +263,9 @@ class GameProcess:
                 message_text = base_text + "<br>Вы можете крутить барабан или называйте слово"
             else:
                 message_text = base_text + "<br>Вы можете назвать букву или слово"
-        else:
-            message_text = "Не ваш ход. Вы не можете называть слово"
-        await self.some_message(chat_id=chat_id, message_text=message_text)
+        # else:
+        #     message_text = "Не ваш ход. Вы не можете называть слово"
+            await self.some_message(chat_id=chat_id, message_text=message_text)
 
     async def leave_game(self, update: Update):
         chat_id, user_id = update.object.peer_id, update.object.user_id
@@ -290,5 +315,4 @@ class GameProcess:
                   f"{winner}<br>Загаданное слово - {word}<br>Игроки:<br>" \
                   f"{'<br>'.join(players_info)}"
         await self.some_message(chat_id=chat_id, message_text=message)
-
 

@@ -21,8 +21,8 @@ class Update:
 
 @dataclass
 class Message:
-    text: str
     peer_id: int
+    text: Optional[str] = None
     user_id: Optional[int] = None
     keyboard: Optional[str] = None
     event_id: Optional[str] = None

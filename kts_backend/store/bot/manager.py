@@ -1,4 +1,5 @@
 import typing
+from time import time
 from typing import Optional
 
 from kts_backend.game.models import Player

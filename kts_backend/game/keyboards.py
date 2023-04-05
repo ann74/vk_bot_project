@@ -11,7 +11,7 @@ start_keyboard = {
                     "payload": "{\"button\": \"startgame\"}",
                     "label": "Начать игру"
                 },
-                "color": "positive"
+                "color": "primary"
             },
         ],
         [
@@ -28,23 +28,6 @@ start_keyboard = {
 }
 start_keyboard = str(json.dumps(start_keyboard))
 
-start_keyboard_callback = {
-    "one_time": True,
-    "inline": False,
-    "buttons": [
-        [
-            {
-                "action": {
-                    "type": "callback",
-                    "payload": "{\"button\": \"startgame\"}",
-                    "label": "Начать игру"
-                },
-                "color": "primary"
-            },
-        ]
-    ]
-}
-start_keyboard_callback = str(json.dumps(start_keyboard_callback))
 
 union_keyboard = {
     "one_time": False,
@@ -57,7 +40,7 @@ union_keyboard = {
                     "payload": "{\"button\": \"uniongame\"}",
                     "label": "Присоединиться к игре"
                 },
-                "color": "primary"
+                "color": "positive"
             },
         ]
     ]
@@ -101,3 +84,22 @@ main_keyboard = {
 }
 
 main_keyboard = str(json.dumps(main_keyboard))
+
+
+start_keyboard_callback = {
+    "one_time": True,
+    "inline": False,
+    "buttons": [
+        [
+            {
+                "action": {
+                    "type": "callback",
+                    "payload": "{\"button\": \"startgame\"}",
+                    "label": "Начать игру"
+                },
+                "color": "primary"
+            },
+        ]
+    ]
+}
+start_keyboard_callback = str(json.dumps(start_keyboard_callback))
