@@ -27,7 +27,7 @@ class SenderAccessor(BaseAccessor):
 
     async def connect(self, app: "Application"):
         self.session = ClientSession(connector=TCPConnector(verify_ssl=False))
-        self.sender = Sender(app.store)
+        self.sender = Sender(app.store, app)
         self.logger.info("start sending")
         await self.sender.start()
 
@@ -100,23 +100,5 @@ class SenderAccessor(BaseAccessor):
         ) as resp:
             if not resp.ok:
                 resp.raise_for_status()
-            data = await resp.json()
-            self.logger.info(data)
-
-    async def message_edit(self, message: Message) -> None:
-        self.logger.info(message)
-        async with self.session.get(
-                self._build_query(
-                    host=API_PATH,
-                    method="messages.edit",
-                    params={
-                        "message": message.text,
-                        "access_token": self.app.config.bot.token,
-                        "peer_id": message.peer_id,
-                        "conversation_message_id": message.conversation_message_id,
-                        "keyboard": message.keyboard,
-                    },
-                )
-        ) as resp:
             data = await resp.json()
             self.logger.info(data)

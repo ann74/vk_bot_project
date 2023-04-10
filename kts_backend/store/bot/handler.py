@@ -1,14 +1,20 @@
 import asyncio
+import pickle
+import typing
 
 from asyncio import Task
 from typing import Optional
 
 from kts_backend.store import Store
 
+if typing.TYPE_CHECKING:
+    from kts_backend.web.app import Application
+
 
 class Handler:
-    def __init__(self, store: Store):
+    def __init__(self, store: Store, app: "Application"):
         self.store = store
+        self.app = app
         self.is_running = False
         self.handler_task: Optional[Task] = None
 
@@ -23,5 +29,9 @@ class Handler:
 
     async def handle_updates(self):
         while self.is_running:
-            update = await self.store.bots_manager.app.receivers_queue.get()
-            await self.store.bots_manager.handle_updates(update)
+            async with self.app.rabbitmq.receivers_queue.iterator() as queue_iter:
+                async for incoming_update in queue_iter:
+                    update = pickle.loads(incoming_update.body)
+                    await self.store.bots_manager.handle_updates(update)
+                    await incoming_update.ack()
+

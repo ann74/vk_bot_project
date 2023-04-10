@@ -104,20 +104,9 @@ class VkApiAccessor(BaseAccessor):
                             update.object.user_id = member_id
                     if raw_update["object"]["message"].get("payload"):
                         update.object.button = json.loads(raw_update["object"]["message"]["payload"])["button"]
-                elif raw_update["type"] == "message_event":
-                    update = Update(
-                        type=raw_update["type"],
-                        object=UpdateObject(
-                            user_id=raw_update["object"]["user_id"],
-                            peer_id=raw_update["object"]["peer_id"],
-                            button=raw_update["object"]["payload"]["button"],
-                            event_id=raw_update["object"]["event_id"],
-                            conversation_message_id=raw_update["object"].get("conversation_message_id")
-                        ),
-                    )
                 else:
                     raise NotImplementedError
-                await self.app.receivers_queue.put(update)
+                await self.app.rabbitmq.publish_receivers(update)
 
     async def get_users_from_chat(self, chat_id: int) -> list[Player]:
         async with self.session.get(

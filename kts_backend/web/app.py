@@ -18,8 +18,7 @@ from .logger import setup_logging
 from .middlewares import setup_middlewares
 from .routes import setup_routes
 from kts_backend.store.database.database import Database
-from kts_backend.store import Store, setup_store
-
+from kts_backend.store import Store, setup_store, RabbitMQ
 
 __all__ = ("Application",)
 
@@ -30,8 +29,7 @@ class Application(AiohttpApplication):
     config: Optional[Config] = None
     store: Optional[Store] = None
     database: Optional[Database] = None
-    receivers_queue: Optional[Queue] = None
-    senders_queue: Optional[Queue] = None
+    rabbitmq: Optional[RabbitMQ] = None
 
 
 class Request(AiohttpRequest):

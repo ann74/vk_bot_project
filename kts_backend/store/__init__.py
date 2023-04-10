@@ -2,6 +2,7 @@ import typing
 from asyncio import Queue
 
 from kts_backend.store.database.database import Database
+from kts_backend.store.rabbitmq.rabbitmq import RabbitMQ
 
 if typing.TYPE_CHECKING:
     from kts_backend.web.app import Application
@@ -24,6 +25,5 @@ class Store:
 
 def setup_store(app: "Application"):
     app.database = Database(app)
+    app.rabbitmq = RabbitMQ(app)
     app.store = Store(app)
-    app.receivers_queue = Queue()
-    app.senders_queue = Queue()

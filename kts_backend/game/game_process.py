@@ -20,7 +20,6 @@ class GameProcess:
         self.players_queues = defaultdict(deque)  # Хранит по ключу чатов, в которых активна игра, очередь игроков сразу с именами и с очками в текущем хожу
         self.points = [0, 10, 20, 50, 100, 150, 200, 500, 'B']
         self.timeouts = {}  # Хранит по ключу чатов запущен таймаут или нет для присоединения к игре
-        self.pins = {}  # Хранит идентефикаторы запиненых сообщений заданий
 
     async def start_message(self, id_: Optional[int] = None):
         if not id_:
@@ -33,7 +32,7 @@ class GameProcess:
                 peer_id=chat_id,
                 keyboard=start_keyboard,
             )
-            await self.app.senders_queue.put(message)
+            await self.app.rabbitmq.publish_senders(message)
 
     async def union_message(self, update: Update):
         message = Message(
@@ -41,7 +40,7 @@ class GameProcess:
             peer_id=update.object.peer_id,
             keyboard=union_keyboard,
         )
-        await self.app.senders_queue.put(message)
+        await self.app.rabbitmq.publish_senders(message)
 
     async def move_player(self, chat_id: int):
         current_player = self.players_queues[chat_id][0]
@@ -49,7 +48,7 @@ class GameProcess:
             text=f"Ходит @{current_player[1]}<br>Крутите барабан или можете сразу назвать слово.",
             peer_id=chat_id,
         )
-        await self.app.senders_queue.put(message)
+        await self.app.rabbitmq.publish_senders(message)
 
     async def main_message(self, chat_id: int, word: str, description: str):
         players = []
@@ -60,14 +59,12 @@ class GameProcess:
             peer_id=chat_id,
             keyboard=main_keyboard,
         )
-        # await self.app.senders_queue.put(message)
         conversation_message_id = await self.app.store.sender.send_message(message)
         message_pin = Message(
             peer_id=chat_id,
             conversation_message_id=conversation_message_id,
         )
-        self.pins[chat_id] = conversation_message_id
-        await self.app.store.sender.pin_message(message_pin)
+        await self.app.rabbitmq.publish_senders(message_pin)
         await self.move_player(chat_id)
 
     async def start_game(self, update: Update):
@@ -125,18 +122,18 @@ class GameProcess:
             text=f"У вас {points} очков на барабане. Называйте букву. Или можете назвать слово.",
             peer_id=chat_id,
         )
-        await self.app.senders_queue.put(message)
+        await self.app.rabbitmq.publish_senders(message)
 
     async def game_finished(self, chat_id: int):
         message = Message(
             text="Игроков больше не осталось. Слово не разгадано. Победителя нет",
             peer_id=chat_id,
         )
-        await self.app.senders_queue.put(message)
+        await self.app.rabbitmq.publish_senders(message)
         del self.players_queues[chat_id]
         await self.app.store.game.update_game_finished(chat_id=chat_id, is_winner=False)
         await self.app.store.game.update_chat(chat_id=chat_id, game_is_active=False)
-        await self.app.store.sender.unpin_message(Message(peer_id=chat_id))
+        await self.app.rabbitmq.publish_senders(Message(peer_id=chat_id))
         await self.start_message(id_=chat_id)
 
     async def move_transition(self, chat_id: int, message_text: str, player_delete: bool = False):
@@ -153,7 +150,7 @@ class GameProcess:
                 text=message_text,
                 peer_id=chat_id,
             )
-            await self.app.senders_queue.put(message)
+            await self.app.rabbitmq.publish_senders(message)
             await self.move_player(chat_id)
 
     async def drum_cooler(self, update: Update):
@@ -184,14 +181,14 @@ class GameProcess:
                  f" Крутите барабан или можете назвать слово.",
             peer_id=chat_id,
         )
-        await self.app.senders_queue.put(message)
+        await self.app.rabbitmq.publish_senders(message)
 
     async def some_message(self, chat_id: int, message_text: str):
         message = Message(
             text=message_text,
             peer_id=chat_id,
         )
-        await self.app.senders_queue.put(message)
+        await self.app.rabbitmq.publish_senders(message)
 
     async def word_solved(self, chat_id: int, word: str, name: str, user_id: int):
         points = await self.app.store.game.get_player_score(user_id)
@@ -200,59 +197,61 @@ class GameProcess:
                  f" {points} очков",
             peer_id=chat_id,
         )
-        await self.app.senders_queue.put(message)
+        await self.app.rabbitmq.publish_senders(message)
         del self.players_queues[chat_id]
         await self.app.store.game.update_game_finished(chat_id=chat_id, is_winner=True)
         await self.app.store.game.update_chat(chat_id=chat_id, game_is_active=False)
-        await self.app.store.sender.unpin_message(Message(peer_id=chat_id))
+        await self.app.rabbitmq.publish_senders(Message(peer_id=chat_id))
         await self.start_message(id_=chat_id)
 
     async def check_letter(self, update: Update):
         chat_id, user_id = update.object.peer_id, update.object.user_id
-        current_player = self.players_queues[chat_id][0]
-        if user_id == current_player[0] and current_player[2] != 0:
-            word, letters, _ = await self.app.store.game.get_word_info(chat_id=chat_id, with_description=False)
-            letters = set(letters)
-            letter = update.object.body.lower()
-            if letter in letters:
-                letters.remove(letter)
-                points = current_player[2]
-                word_mask = self.get_word_mask(word, letters)
-                winner = True if not letters else False
-                await self.app.store.game.update_player_score(vk_id=user_id, chat_id=chat_id, points=points, winner=winner)
-                await self.app.store.game.update_game_letters(chat_id=chat_id, letters=''.join(letters))
-                if not letters:
-                    await self.word_solved(chat_id=chat_id, word=word_mask, user_id=user_id, name=current_player[1])
+        if self.players_queues[chat_id]:
+            current_player = self.players_queues[chat_id][0]
+            if user_id == current_player[0] and current_player[2] != 0:
+                word, letters, _ = await self.app.store.game.get_word_info(chat_id=chat_id, with_description=False)
+                letters = set(letters)
+                letter = update.object.body.lower()
+                if letter in letters:
+                    letters.remove(letter)
+                    points = current_player[2]
+                    word_mask = self.get_word_mask(word, letters)
+                    winner = True if not letters else False
+                    await self.app.store.game.update_player_score(vk_id=user_id, chat_id=chat_id, points=points, winner=winner)
+                    await self.app.store.game.update_game_letters(chat_id=chat_id, letters=''.join(letters))
+                    if not letters:
+                        await self.word_solved(chat_id=chat_id, word=word_mask, user_id=user_id, name=current_player[1])
+                    else:
+                        await self.right_letter(chat_id=chat_id, word=word_mask, name=current_player[1])
                 else:
-                    await self.right_letter(chat_id=chat_id, word=word_mask, name=current_player[1])
-            else:
-                message_text = "К сожалению вы не правильно назвали букву. Ход переходит к следующему игроку."
-                await self.move_transition(chat_id, message_text)
-        elif user_id == current_player[0] and current_player[2] == 0:
-            message_text = "Нужно сначала покрутить барабан"
-            await self.some_message(chat_id, message_text)
-        # else:
-        #     message_text = "Сейчас не ваш ход, не подсказывайте"
-        #     await self.some_message(chat_id, message_text)
+                    message_text = "К сожалению вы не правильно назвали букву. Ход переходит к следующему игроку."
+                    await self.move_transition(chat_id, message_text)
+            elif user_id == current_player[0] and current_player[2] == 0:
+                message_text = "Нужно сначала покрутить барабан"
+                await self.some_message(chat_id, message_text)
+            # else:
+            #     message_text = "Сейчас не ваш ход, не подсказывайте"
+            #     await self.some_message(chat_id, message_text)
 
     async def check_word(self, update: Update):
         chat_id, user_id = update.object.peer_id, update.object.user_id
-        current_player = self.players_queues[chat_id][0]
-        if user_id == current_player[0]:
-            word, letters, _ = await self.app.store.game.get_word_info(chat_id=chat_id, with_description=False)
-            user_word = update.object.body.lower()
-            if user_word == word:
-                word = ' '.join(list(word.upper()))
-                points = current_player[2]
-                await self.app.store.game.update_player_score(vk_id=user_id, chat_id=chat_id, points=points, winner=True)
-                await self.word_solved(chat_id=chat_id, word=word, user_id=user_id, name=current_player[1])
-            else:
-                message_text = f"@{current_player[1]} вы не верно назвали слово, поэтому покидаете игру." \
-                               f"<br>Ход переходит к следующему игроку"
-                await self.move_transition(chat_id=chat_id, message_text=message_text, player_delete=True)
-        # else:
-        #     message_text = "Сейчас не ваш ход, не подсказывайте"
-        #     await self.some_message(chat_id, message_text)
+        if self.players_queues[chat_id]:
+            current_player = self.players_queues[chat_id][0]
+            if user_id == current_player[0]:
+                word, letters, _ = await self.app.store.game.get_word_info(chat_id=chat_id, with_description=False)
+                user_word = update.object.body.lower()
+                if user_word == word:
+                    word = ' '.join(list(word.upper()))
+                    points = current_player[2]
+                    await self.app.store.game.update_player_score(vk_id=user_id, chat_id=chat_id, points=points, winner=True)
+                    await self.word_solved(chat_id=chat_id, word=word, user_id=user_id, name=current_player[1])
+                else:
+                    message_text = f"@{current_player[1]} вы не верно назвали слово, поэтому покидаете игру." \
+                                   f"<br>Ход переходит к следующему игроку"
+                    await self.move_transition(chat_id=chat_id, message_text=message_text, player_delete=True)
+            # else:
+            #     message_text = "Сейчас не ваш ход, не подсказывайте"
+            #     await self.some_message(chat_id, message_text)
 
     async def say_word(self, update: Update):
         chat_id, user_id = update.object.peer_id, update.object.user_id

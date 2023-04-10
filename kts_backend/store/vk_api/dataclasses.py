@@ -9,7 +9,6 @@ class UpdateObject:
     body: Optional[str] = None
     action: Optional[str] = None
     button: Optional[str] = None
-    event_id: Optional[str] = None
     conversation_message_id: Optional[int] = None
 
 
@@ -25,5 +24,4 @@ class Message:
     text: Optional[str] = None
     user_id: Optional[int] = None
     keyboard: Optional[str] = None
-    event_id: Optional[str] = None
     conversation_message_id: Optional[int] = None

@@ -21,7 +21,7 @@ class BotManager(BaseAccessor):
         self.handler: Optional[Handler] = None
 
     async def connect(self, app: "Application"):
-        self.handler = Handler(app.store)
+        self.handler = Handler(app.store, app)
         self.logger.info("start handling")
         await self.handler.start()
 
@@ -53,4 +53,4 @@ class BotManager(BaseAccessor):
             await self.app.store.game.game_process.check_word(update)
 
         else:
-            raise NotImplementedError
+            pass

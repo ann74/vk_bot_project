@@ -35,12 +35,21 @@ class DatabaseConfig:
 
 
 @dataclass
+class RabbitMQConfig:
+    host: str
+    port: int
+    user: str
+    password: str
+
+
+@dataclass
 class Config:
     admin: AdminConfig
     session: SessionConfig = None
     bot: BotConfig = None
     database: DatabaseConfig = None
-    vk_key: str = None
+    rabbitmq: RabbitMQConfig = None
+
 
 
 def setup_config(app: "Application", config_path: str):
@@ -66,5 +75,11 @@ def setup_config(app: "Application", config_path: str):
             user=raw_config["database"]["user"],
             password=raw_config["database"]["password"],
             url=raw_config["database"]["url"]
+        ),
+        rabbitmq=RabbitMQConfig(
+            host=raw_config["rabbitmq"]["host"],
+            port=raw_config["rabbitmq"]["port"],
+            user=raw_config["rabbitmq"]["user"],
+            password=raw_config["rabbitmq"]["password"],
         ),
     )
