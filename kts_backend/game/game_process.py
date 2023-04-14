@@ -1,7 +1,7 @@
 import asyncio
 from collections import deque, defaultdict
 from random import choice
-import time
+from time import time
 import typing
 
 from typing import Optional
@@ -17,9 +17,9 @@ class GameProcess:
     def __init__(self, app: "Application"):
         self.app = app
         self.max_members = 5
-        self.players_queues = defaultdict(deque)  # Хранит по ключу чатов, в которых активна игра, очередь игроков сразу с именами и с очками в текущем хожу
+        self.players_queues = defaultdict(deque)  # Хранит по ключу чатов, в которых активна игра, очередь игроков сразу с именами и с очками в текущем ходу, также время для таймера хода
         self.points = [0, 10, 20, 50, 100, 150, 200, 500, 'B']
-        self.timeouts = {}  # Хранит по ключу чатов запущен таймаут или нет для присоединения к игре
+        self.timeouts = defaultdict(float)  # Хранит по ключу чатов время для начала игры по таймауту, если игроков меньше максимума или окончания игры
 
     async def start_message(self, id_: Optional[int] = None):
         if not id_:
@@ -44,11 +44,14 @@ class GameProcess:
 
     async def move_player(self, chat_id: int):
         current_player = self.players_queues[chat_id][0]
+        asyncio.create_task(self.move_timout(chat_id=chat_id))
         message = Message(
-            text=f"Ходит @{current_player[1]}<br>Крутите барабан или можете сразу назвать слово.",
+            text=f"Ходит @{current_player[1]}<br>Крутите барабан или можете сразу назвать слово. На ход 30 сек.",
             peer_id=chat_id,
         )
         await self.app.rabbitmq.publish_senders(message)
+        self.players_queues[chat_id][0][3] = time()
+
 
     async def main_message(self, chat_id: int, word: str, description: str):
         players = []
@@ -74,7 +77,7 @@ class GameProcess:
             await self.app.store.game.create_game(chat_id=chat_id, vk_id=user_id)
             await self.app.store.game.update_chat(chat_id=chat_id, game_is_active=True)
             await self.union_message(update)
-            self.players_queues[chat_id].append([user_id, name, 0])
+            self.players_queues[chat_id].append([user_id, name, 0, None])
 
     @staticmethod
     def get_word_mask(word: str, letters_mask: set) -> str:
@@ -87,8 +90,7 @@ class GameProcess:
         return ' '.join(res).upper()
 
     async def start_game_process(self, chat_id: int):
-        # if self.timeouts[chat_id] == 1:
-        self.timeouts[chat_id] = 0
+        self.timeouts[chat_id] = time()
         await self.app.store.game.update_game_move(chat_id=chat_id, current_move=self.players_queues[chat_id][0][0])
         word, letters, description = await self.app.store.game.get_word_info(chat_id=chat_id, with_description=True)
         word_mask = self.get_word_mask(word, set(letters))
@@ -104,17 +106,22 @@ class GameProcess:
                 name = await self.app.store.game.get_player_by_id(user_id)
                 if name:
                     await self.app.store.game.create_player_in_game(vk_id=user_id, chat_id=chat_id)
-                    self.players_queues[chat_id].append([user_id, name, 0])
+                    self.players_queues[chat_id].append([user_id, name, 0, None])
         if len(self.players_queues[chat_id]) == 2:
-            self.timeouts[chat_id] = 1
-            asyncio.create_task(self.timout(chat_id=chat_id))
+            self.timeouts[chat_id] = time()
+            asyncio.create_task(self.start_timout(chat_id=chat_id))
         if len(self.players_queues[chat_id]) == self.max_members:
             await self.start_game_process(chat_id=chat_id)
 
-    async def timout(self, chat_id: int):
+    async def start_timout(self, chat_id: int):
         await asyncio.sleep(15)
-        if self.timeouts[chat_id] == 1:
+        if self.timeouts[chat_id] and (time() - self.timeouts[chat_id] > 15):
             await self.start_game_process(chat_id=chat_id)
+
+    async def move_timout(self, chat_id: int):
+        await asyncio.sleep(31)
+        if self.players_queues[chat_id] and (time() - self.players_queues[chat_id][0][3] >= 30):
+            await self.move_transition(chat_id=chat_id, message_text='Время вышло, ход переходит к следующему игроку')
 
     async def answer_player(self, chat_id: int, points: int):
         self.players_queues[chat_id][0][2] = points
@@ -131,6 +138,7 @@ class GameProcess:
         )
         await self.app.rabbitmq.publish_senders(message)
         del self.players_queues[chat_id]
+        del self.timeouts[chat_id]
         await self.app.store.game.update_game_finished(chat_id=chat_id, is_winner=False)
         await self.app.store.game.update_chat(chat_id=chat_id, game_is_active=False)
         await self.app.rabbitmq.publish_senders(Message(peer_id=chat_id))
@@ -178,10 +186,12 @@ class GameProcess:
         self.players_queues[chat_id][0][2] = 0
         message = Message(
             text=f"Есть такая буква!<br><br>{word}<br><br>@{name} продолжайте."
-                 f" Крутите барабан или можете назвать слово.",
+                 f" Крутите барабан или можете назвать слово. У вас 30 сек на ход.",
             peer_id=chat_id,
         )
         await self.app.rabbitmq.publish_senders(message)
+        self.players_queues[chat_id][0][3] = time()
+        asyncio.create_task(self.move_timout(chat_id=chat_id))
 
     async def some_message(self, chat_id: int, message_text: str):
         message = Message(
@@ -199,6 +209,7 @@ class GameProcess:
         )
         await self.app.rabbitmq.publish_senders(message)
         del self.players_queues[chat_id]
+        del self.timeouts[chat_id]
         await self.app.store.game.update_game_finished(chat_id=chat_id, is_winner=True)
         await self.app.store.game.update_chat(chat_id=chat_id, game_is_active=False)
         await self.app.rabbitmq.publish_senders(Message(peer_id=chat_id))
