@@ -85,9 +85,9 @@ class GameAccessor(BaseAccessor):
         async with self.app.database.session.begin() as session:
             query = select(PlayerModel).where(PlayerModel.vk_id == vk_id)
             player = await session.execute(query)
-            player = player.scalars().first()
         if not player:
             return None
+        player = player.scalars().first()
         return f"{player.name} {player.last_name}"
 
     async def get_last_game(self, chat_id: int) -> Game:

@@ -1,0 +1,22 @@
+session:
+  key:
+admin:
+  email:
+  password:
+database:
+  host:
+  port:
+  user:
+  password:
+  database:
+  url:
+bot:
+  token:
+  group_id:
+rabbitmq:
+  host:
+  port:
+  user:
+  password:
+
+

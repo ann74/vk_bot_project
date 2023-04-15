@@ -16,7 +16,7 @@ if typing.TYPE_CHECKING:
 class GameProcess:
     def __init__(self, app: "Application"):
         self.app = app
-        self.max_members = 5
+        self.max_members = 3
         self.players_queues = defaultdict(deque)  # Хранит по ключу чатов, в которых активна игра, очередь игроков сразу с именами и с очками в текущем ходу, также время для таймера хода
         self.points = [0, 10, 20, 50, 100, 150, 200, 500, 'B']
         self.timeouts = defaultdict(float)  # Хранит по ключу чатов время для начала игры по таймауту, если игроков меньше максимума или окончания игры
@@ -303,7 +303,7 @@ class GameProcess:
 
     async def invite_chat(self, update: Update):
         player_base = await self.app.store.game.get_player_by_id(update.object.user_id)
-        self.app.store.game.logger.info(player_base)
+        # self.app.store.game.logger.info(player_base)
         if not player_base:
             player = await self.app.store.vk_api.get_user_by_id(update.object.user_id)
             await self.app.store.game.create_user(player)

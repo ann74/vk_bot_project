@@ -40,3 +40,24 @@ services:
       - 5672:5672
     volumes:
       - ./rabbitmq:/var/lib/rabbitmq
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+#  app:
+#    build:
+#      context: .
+#    restart: always
+#    volumes:
+#      - ./:/app
+#    command: sh -c "python main.py"
+#    ports:
+#      - "8080:8080"
+#    depends_on:
+#      pg_vk:
+#        condition: service_healthy
+#      rb_vk:
+#        condition: service_healthy
+
